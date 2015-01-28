@@ -17,8 +17,8 @@
 # END GPL LICENSE BLOCK #####
 
 bl_info = {
-    "name": "Show Material Nodes",
-    "description": "Adds a simple panel with a list of materials; click on one and those nodes are shown in the Node Editor",
+    "name": "Tree List",
+    "description": " List of node trees to switch between quickly",
     "author": "Greg Zaal",
     "version": (0, 1),
     "blender": (2, 73, 0),
@@ -29,6 +29,21 @@ bl_info = {
     "category": "Node"}
 
 import bpy
+
+
+'''
+TODOs:
+    Show lights
+    Make options panel with:
+        Show materials with no users
+        Show world settings of all scenes
+    Assign material to selected objects
+    Recenter all trees
+    Material Templates
+        Set of decent starting points, like diffuse + glossy with fresnel
+        Let user add own templates (from node groups?)
+'''
+
 
 class TreeListSettings(bpy.types.PropertyGroup):
     expand_materials = bpy.props.BoolProperty(
@@ -42,10 +57,10 @@ class TreeListSettings(bpy.types.PropertyGroup):
         description="Show the list of lights")
 
 
-class MPGoTo(bpy.types.Operator):
+class TLGoTo(bpy.types.Operator):
 
     'Show the nodes for this material'
-    bl_idname = 'mp.goto'
+    bl_idname = 'treelist.goto'
     bl_label = 'Go To'
     mat = bpy.props.StringProperty(default = "")
     world = bpy.props.BoolProperty(default = False)
@@ -110,7 +125,7 @@ class TreeListMaterials(bpy.types.Panel):
                     except:
                         icon_val = 1
                         print ("WARNING [Mat Panel]: Could not get icon value for %s" % name)
-                    op = col.operator('mp.goto', text=name, emboss=(mat==context.space_data.id), icon_value=icon_val)
+                    op = col.operator('treelist.goto', text=name, emboss=(mat==context.space_data.id), icon_value=icon_val)
                     op.mat = name
                     op.world = False
 
@@ -135,7 +150,7 @@ class TreeListLighting(bpy.types.Panel):
         col = layout.column(align=True)
 
         if context.scene.world.use_nodes:
-            op = col.operator('mp.goto', text="World", emboss=(context.scene.world==context.space_data.id), icon='WORLD')
+            op = col.operator('treelist.goto', text="World", emboss=(context.scene.world==context.space_data.id), icon='WORLD')
             op.world = True
 
 
