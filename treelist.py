@@ -38,11 +38,11 @@ TODOs:
         Show materials with no users
         Show world settings of all scenes
         Show only materials for objects in current scene
+        Show materials only for selected objects
     Assign material to selected objects
-    Recenter all trees
-    Material Templates
-        Set of decent starting points, like diffuse + glossy with fresnel
-        Let user add own templates (from node groups?)
+    Recenter view (don't change zoom) (add preference to disable) - talk to devs about making space_data.edit_tree.view_center editable
+    User preference for which panels are collapsed/expanded by default
+    Create new material and assign to selected objects
 '''
 
 def get_materials():
@@ -99,12 +99,53 @@ class TreeListSettings(bpy.types.PropertyGroup):
         description="Show the list of lights")
 
 
-class TLGoTo(bpy.types.Operator):
+class TLGoToMat(bpy.types.Operator):
 
     'Show the nodes for this material'
-    bl_idname = 'treelist.goto'
-    bl_label = 'Go To'
+    bl_idname = 'treelist.goto_mat'
+    bl_label = 'Go To Material'
     mat = bpy.props.StringProperty(default = "")
+
+    def execute(self, context):
+        dummy_object(delete=True)
+        scene = context.scene
+        context.space_data.tree_type = 'ShaderNodeTree'
+        context.space_data.shader_type = 'OBJECT'
+        mat = bpy.data.materials[self.mat]
+
+        objs_with_mat = 0
+        active_set = False
+        for obj in scene.objects:
+            obj_materials = [slot.material for slot in obj.material_slots]
+            if mat in obj_materials:
+                objs_with_mat += 1
+                obj.select = True
+                if not active_set:  # set first object as active
+                    active_set = True
+                    scene.objects.active = obj
+                    if mat != obj.active_material:
+                        for i, x in enumerate(obj.material_slots):
+                            if x.material == mat:
+                                obj.active_material_index = i
+                                break
+            else:
+                obj.select = False
+
+        if objs_with_mat == 0:
+            self.report({'WARNING'}, "No objects in this scene use '" + mat.name + "' material")
+            dummy = dummy_object()
+            slot = dummy.material_slots[0]
+            slot.material = mat
+
+        return {'FINISHED'}
+
+
+class TLGoToLight(bpy.types.Operator):
+
+    'Show the nodes for this material'
+    bl_idname = 'treelist.goto_light'
+    bl_label = 'Go To Material'
+    light = bpy.props.StringProperty(default = "")
     world = bpy.props.BoolProperty(default = False)
 
     def execute(self, context):
@@ -115,31 +156,22 @@ class TLGoTo(bpy.types.Operator):
             context.space_data.shader_type = 'WORLD'
         else:
             context.space_data.shader_type = 'OBJECT'
-            mat = bpy.data.materials[self.mat]
+            light = bpy.data.materials[self.light]
 
-            objs_with_mat = 0
-            active_set = False
-            for obj in scene.objects:
-                obj_materials = [slot.material for slot in obj.material_slots]
-                if mat in obj_materials:
-                    objs_with_mat += 1
-                    obj.select = True
-                    if not active_set:  # set first object as active
-                        active_set = True
-                        scene.objects.active = obj
-                        if mat != obj.active_material:
-                            for i, x in enumerate(obj.material_slots):
-                                if x.material == mat:
-                                    obj.active_material_index = i
-                                    break
-                else:
-                    obj.select = False
+        return {'FINISHED'}
 
-            if objs_with_mat == 0:
-                self.report({'WARNING'}, "No objects in this scene use '" + mat.name + "' material")
-                dummy = dummy_object()
-                slot = dummy.material_slots[0]
-                slot.material = mat
+
+class TLGoToComp(bpy.types.Operator):
+
+    'Show the nodes for this material'
+    bl_idname = 'treelist.goto_comp'
+    bl_label = 'Go To Composite'
+    scene = bpy.props.StringProperty(default = "")
+
+    def execute(self, context):
+        context.space_data.tree_type = 'CompositorNodeTree'
+        scene = bpy.data.scenes[self.scene]
+        context.screen.scene = scene
 
         return {'FINISHED'}
 
@@ -170,9 +202,8 @@ class TreeListMaterials(bpy.types.Panel):
             except:
                 icon_val = 1
                 print ("WARNING [Mat Panel]: Could not get icon value for %s" % name)
-            op = col.operator('treelist.goto', text=name, emboss=(mat==context.space_data.id), icon_value=icon_val)
+            op = col.operator('treelist.goto_mat', text=name, emboss=(mat==context.space_data.id), icon_value=icon_val)
             op.mat = name
-            op.world = False
 
 
 class TreeListLighting(bpy.types.Panel):
@@ -195,8 +226,27 @@ class TreeListLighting(bpy.types.Panel):
         col = layout.column(align=True)
 
         if context.scene.world.use_nodes:
-            op = col.operator('treelist.goto', text="World", emboss=(context.scene.world==context.space_data.id), icon='WORLD')
+            op = col.operator('treelist.goto_light', text="World", emboss=(context.scene.world==context.space_data.id), icon='WORLD')
             op.world = True
+
+
+class TreeListCompositing(bpy.types.Panel):
+
+    bl_label = "Compositing"
+    bl_space_type = "NODE_EDITOR"
+    bl_region_type = "TOOLS"
+    bl_category = "Trees"
+
+    def draw(self, context):
+        scenes = bpy.data.scenes
+        layout = self.layout
+
+        col = layout.column(align=True)
+
+        for sc in scenes:
+            name = sc.name
+            op = col.operator('treelist.goto_comp', text=name, emboss=(sc==context.space_data.id), icon='SCENE_DATA')
+            op.scene = name
 
 
 def register():
