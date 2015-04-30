@@ -45,6 +45,23 @@ TODOs:
     Create new material and assign to selected objects
 '''
 
+
+class TreeListSettings(bpy.types.PropertyGroup):
+    expand_materials = bpy.props.BoolProperty(
+        name="Expand Materials",
+        default=True,
+        description="Show the list of materials")
+
+    expand_lighting = bpy.props.BoolProperty(
+        name="Expand Lighting",
+        default=True,
+        description="Show the list of lights")
+
+
+#####################################################################
+# Functions
+#####################################################################
+
 def get_materials():
     materials = []
     for mat in bpy.data.materials:
@@ -87,17 +104,9 @@ def dummy_object(delete=False):
     return dummy
 
 
-class TreeListSettings(bpy.types.PropertyGroup):
-    expand_materials = bpy.props.BoolProperty(
-        name="Expand Materials",
-        default=True,
-        description="Show the list of materials")
-
-    expand_lighting = bpy.props.BoolProperty(
-        name="Expand Lighting",
-        default=True,
-        description="Show the list of lights")
-
+#####################################################################
+# Operators
+#####################################################################
 
 class TLGoToMat(bpy.types.Operator):
 
@@ -156,7 +165,8 @@ class TLGoToLight(bpy.types.Operator):
             context.space_data.shader_type = 'WORLD'
         else:
             context.space_data.shader_type = 'OBJECT'
-            light = bpy.data.materials[self.light]
+            light = bpy.data.objects[self.light]
+            scene.objects.active = light
 
         return {'FINISHED'}
 
@@ -175,6 +185,10 @@ class TLGoToComp(bpy.types.Operator):
 
         return {'FINISHED'}
 
+
+#####################################################################
+# UI
+#####################################################################
 
 class TreeListMaterials(bpy.types.Panel):
 
@@ -220,14 +234,22 @@ class TreeListLighting(bpy.types.Panel):
     def draw(self, context):
         scene = context.scene
         layout = self.layout
-        materials = bpy.data.materials
+        lights = [obj for obj in scene.objects if obj.type == 'LAMP']
         settings = scene.treelist_settings
 
         col = layout.column(align=True)
 
+        for light in lights:
+            if light.data.use_nodes:
+                name = light.name
+                op = col.operator('treelist.goto_light', text=name, emboss=(light.data==context.space_data.id), icon='LAMP_%s' % light.data.type)
+                op.light = name
+                op.world = False
+
         if context.scene.world.use_nodes:
             op = col.operator('treelist.goto_light', text="World", emboss=(context.scene.world==context.space_data.id), icon='WORLD')
             op.world = True
+
 
 
 class TreeListCompositing(bpy.types.Panel):
@@ -248,6 +270,10 @@ class TreeListCompositing(bpy.types.Panel):
             op = col.operator('treelist.goto_comp', text=name, emboss=(sc==context.space_data.id), icon='SCENE_DATA')
             op.scene = name
 
+
+#####################################################################
+# Registration
+#####################################################################
 
 def register():
     bpy.utils.register_module(__name__)
