@@ -37,12 +37,54 @@ TODOs:
     Make options panel with:
         Show materials with no users
         Show world settings of all scenes
+        Show only materials for objects in current scene
     Assign material to selected objects
     Recenter all trees
     Material Templates
         Set of decent starting points, like diffuse + glossy with fresnel
         Let user add own templates (from node groups?)
 '''
+
+def get_materials():
+    materials = []
+    for mat in bpy.data.materials:
+        conditions = [
+            mat.users,  # TODO make this optional
+            not mat.library,  # don't allow editing of linked library materials - TODO make this optional (can help to be able to look at the nodes, even if you can't edit it)
+            mat.use_nodes]
+        if all(conditions):
+            materials.append(mat)
+
+    return materials
+
+def dummy_object(delete=False):
+    ''' Return the existing dummy object, or create one if it doesn't exist. '''
+    scene = bpy.context.scene
+
+    if delete:
+        for obj in scene.objects:
+            if "TreeList Dummy Object" in obj.name:
+                scene.objects.unlink(obj)
+        return "DONE"
+    
+    dummy = None
+    previous_dummy = [obj for obj in bpy.data.objects if obj.name == "TreeList Dummy Object"]
+    if previous_dummy:
+        dummy = previous_dummy[0]
+    else:
+        m = bpy.data.meshes.new("TreeList Dummy Mesh")
+        dummy = bpy.data.objects.new("TreeList Dummy Object", m)
+
+    if dummy not in list(obj for obj in scene.objects):
+        scene.objects.link(dummy)
+
+    dummy.select = True
+    scene.objects.active = dummy
+
+    if len(dummy.material_slots) == 0:
+        bpy.ops.object.material_slot_add()
+        
+    return dummy
 
 
 class TreeListSettings(bpy.types.PropertyGroup):
@@ -66,6 +108,8 @@ class TLGoTo(bpy.types.Operator):
     world = bpy.props.BoolProperty(default = False)
 
     def execute(self, context):
+        dummy_object(delete=True)
+        scene = context.scene
         context.space_data.tree_type = 'ShaderNodeTree'
         if self.world:
             context.space_data.shader_type = 'WORLD'
@@ -75,14 +119,14 @@ class TLGoTo(bpy.types.Operator):
 
             objs_with_mat = 0
             active_set = False
-            for obj in bpy.data.objects:
+            for obj in scene.objects:
                 obj_materials = [slot.material for slot in obj.material_slots]
                 if mat in obj_materials:
                     objs_with_mat += 1
                     obj.select = True
                     if not active_set:  # set first object as active
                         active_set = True
-                        context.scene.objects.active = obj
+                        scene.objects.active = obj
                         if mat != obj.active_material:
                             for i, x in enumerate(obj.material_slots):
                                 if x.material == mat:
@@ -92,7 +136,10 @@ class TLGoTo(bpy.types.Operator):
                     obj.select = False
 
             if objs_with_mat == 0:
-                self.report({'WARNING'}, "No objects use material '" + mat.name + "'")
+                self.report({'WARNING'}, "No objects in this scene use '" + mat.name + "' material")
+                dummy = dummy_object()
+                slot = dummy.material_slots[0]
+                slot.material = mat
 
         return {'FINISHED'}
 
@@ -111,23 +158,21 @@ class TreeListMaterials(bpy.types.Panel):
     def draw(self, context):
         scene = context.scene
         layout = self.layout
-        materials = bpy.data.materials
+        materials = get_materials()
         settings = scene.treelist_settings
 
         col = layout.column(align=True)
 
         for mat in materials:
-            if mat.users:  # TODO turn this into a property
-                if mat.use_nodes:
-                    name = mat.name
-                    try:
-                        icon_val = layout.icon(mat)
-                    except:
-                        icon_val = 1
-                        print ("WARNING [Mat Panel]: Could not get icon value for %s" % name)
-                    op = col.operator('treelist.goto', text=name, emboss=(mat==context.space_data.id), icon_value=icon_val)
-                    op.mat = name
-                    op.world = False
+            name = mat.name
+            try:
+                icon_val = layout.icon(mat)
+            except:
+                icon_val = 1
+                print ("WARNING [Mat Panel]: Could not get icon value for %s" % name)
+            op = col.operator('treelist.goto', text=name, emboss=(mat==context.space_data.id), icon_value=icon_val)
+            op.mat = name
+            op.world = False
 
 
 class TreeListLighting(bpy.types.Panel):
