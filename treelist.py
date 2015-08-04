@@ -20,8 +20,8 @@ bl_info = {
     "name": "Tree List",
     "description": " List of node trees to switch between quickly",
     "author": "Greg Zaal",
-    "version": (0, 1),
-    "blender": (2, 73, 0),
+    "version": (0, 9),
+    "blender": (2, 75, 0),
     "location": "Node Editor > Tools",
     "warning": "",
     "wiki_url": "",
@@ -33,40 +33,68 @@ import bpy
 
 '''
 TODOs:
-    Show lights
-    Make options panel with:
-        Show materials with no users
-        Show world settings of all scenes
-        Show only materials for objects in current scene
-        Show materials only for selected objects
+    Show list of groups
     Assign material to selected objects
     Recenter view (don't change zoom) (add preference to disable) - talk to devs about making space_data.edit_tree.view_center editable
     User preference for which panels are collapsed/expanded by default
-    Create new material and assign to selected objects
+    Create new material and optionally...
+        assign to selected objects
+        duplicate from active
 '''
 
 
 class TreeListSettings(bpy.types.PropertyGroup):
-    expand_materials = bpy.props.BoolProperty(
-        name="Expand Materials",
-        default=True,
-        description="Show the list of materials")
+    expand_mat_options = bpy.props.BoolProperty(
+        name="Options",
+        default=False,
+        description="Show settings for controling which trees are listed")
 
-    expand_lighting = bpy.props.BoolProperty(
-        name="Expand Lighting",
-        default=True,
-        description="Show the list of lights")
+    selected_only = bpy.props.BoolProperty(
+        name="Selected Objects Only",
+        default=False,
+        description="Only show trees used by objects that are selected")
+
+    all_scenes = bpy.props.BoolProperty(
+        name="All Scenes",
+        default=False,
+        description="Show trees from all the scenes (not just the current one). (\"Selected Objects Only\" must be disabled)")
+
+    show_zero_users = bpy.props.BoolProperty(
+        name="Show 0-User Trees",
+        default=False,
+        description="Also show trees that have no users. (\"All Scenes\" must be enabled)")
 
 
 #####################################################################
 # Functions
 #####################################################################
 
+def material_in_cur_scene(mat):
+    scene = bpy.context.scene
+    for obj in scene.objects:
+        if obj.name != "TreeList Dummy Object":
+            for slot in obj.material_slots:
+                if slot.material == mat:
+                    return True
+    return False
+
+def material_on_sel_obj(mat):
+    selection = bpy.context.selected_objects
+    for obj in selection:
+        if obj.name != "TreeList Dummy Object":
+            for slot in obj.material_slots:
+                if slot.material == mat:
+                    return True
+    return False
+
 def get_materials():
+    settings = bpy.context.window_manager.treelist_settings
     materials = []
     for mat in bpy.data.materials:
         conditions = [
-            mat.users,  # TODO make this optional
+            (settings.show_zero_users or mat.users),
+            (settings.all_scenes or material_in_cur_scene(mat)),
+            (not settings.selected_only or material_on_sel_obj(mat)),
             not mat.library,  # don't allow editing of linked library materials - TODO make this optional (can help to be able to look at the nodes, even if you can't edit it)
             mat.use_nodes]
         if all(conditions):
@@ -202,10 +230,10 @@ class TreeListMaterials(bpy.types.Panel):
         return context.scene.render.engine == 'CYCLES'
 
     def draw(self, context):
+        settings = context.window_manager.treelist_settings
         scene = context.scene
         layout = self.layout
         materials = get_materials()
-        settings = scene.treelist_settings
 
         col = layout.column(align=True)
 
@@ -216,8 +244,32 @@ class TreeListMaterials(bpy.types.Panel):
             except:
                 icon_val = 1
                 print ("WARNING [Mat Panel]: Could not get icon value for %s" % name)
-            op = col.operator('treelist.goto_mat', text=name, emboss=(mat==context.space_data.id), icon_value=icon_val)
-            op.mat = name
+            if mat.users:
+                op = col.operator('treelist.goto_mat', text=name, emboss=(mat==context.space_data.id), icon_value=icon_val)
+                op.mat = name
+            else:
+                row = col.row(align=True)
+                op = row.operator('treelist.goto_mat', text=name, emboss=(mat==context.space_data.id), icon_value=icon_val)
+                op.mat = name
+                op = row.operator('treelist.goto_mat', text="", emboss=(mat==context.space_data.id), icon='ERROR')
+                op.mat = name
+
+        if not materials:
+            col.label("Nothing to show!")
+
+        col = layout.column(align=True)
+
+        box = col.box()
+        scol = box.column(align=True)
+        scol.prop(settings, 'expand_mat_options', toggle=True, icon='TRIA_DOWN' if settings.expand_mat_options else 'TRIA_RIGHT')
+        if settings.expand_mat_options:
+            scol.prop(settings, "selected_only")
+            r = scol.row()
+            r.enabled = not settings.selected_only
+            r.prop(settings, "all_scenes")
+            r = scol.row()
+            r.enabled = (settings.all_scenes and not settings.selected_only)
+            r.prop(settings, "show_zero_users")
 
 
 class TreeListLighting(bpy.types.Panel):
@@ -235,7 +287,6 @@ class TreeListLighting(bpy.types.Panel):
         scene = context.scene
         layout = self.layout
         lights = [obj for obj in scene.objects if obj.type == 'LAMP']
-        settings = scene.treelist_settings
 
         col = layout.column(align=True)
 
@@ -249,7 +300,6 @@ class TreeListLighting(bpy.types.Panel):
         if context.scene.world.use_nodes:
             op = col.operator('treelist.goto_light', text="World", emboss=(context.scene.world==context.space_data.id), icon='WORLD')
             op.world = True
-
 
 
 class TreeListCompositing(bpy.types.Panel):
@@ -278,10 +328,10 @@ class TreeListCompositing(bpy.types.Panel):
 def register():
     bpy.utils.register_module(__name__)
 
-    bpy.types.Scene.treelist_settings = bpy.props.PointerProperty(type=TreeListSettings)
+    bpy.types.WindowManager.treelist_settings = bpy.props.PointerProperty(type=TreeListSettings)
 
 def unregister():
-    del bpy.types.Scene.treelist_settings
+    del bpy.types.WindowManager.treelist_settings
 
     bpy.utils.unregister_module(__name__)
 
