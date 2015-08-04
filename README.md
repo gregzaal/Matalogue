@@ -6,6 +6,8 @@ This makes it easier to **switch between different materials** while shading, an
 
 ### [Download Latest Version](https://raw.githubusercontent.com/gregzaal/Matalogue/master/matalogue.py)
 
+![demo](https://raw.githubusercontent.com/gregzaal/Matalogue/master/demo.gif)
+
 Still to do:
 
 * Show list of node groups
