@@ -17,10 +17,10 @@
 # END GPL LICENSE BLOCK #####
 
 bl_info = {
-    "name": "Tree List",
-    "description": " List of node trees to switch between quickly",
+    "name": "Matalogue",
+    "description": " Catalogue of node trees in the toolbar to switch between quickly",
     "author": "Greg Zaal",
-    "version": (0, 9),
+    "version": (1, 0),
     "blender": (2, 75, 0),
     "location": "Node Editor > Tools",
     "warning": "",
@@ -43,11 +43,11 @@ TODOs:
 '''
 
 
-class TreeListSettings(bpy.types.PropertyGroup):
+class MatalogueSettings(bpy.types.PropertyGroup):
     expand_mat_options = bpy.props.BoolProperty(
         name="Options",
         default=False,
-        description="Show settings for controling which trees are listed")
+        description="Show settings for controlling which trees are listed")
 
     selected_only = bpy.props.BoolProperty(
         name="Selected Objects Only",
@@ -72,7 +72,7 @@ class TreeListSettings(bpy.types.PropertyGroup):
 def material_in_cur_scene(mat):
     scene = bpy.context.scene
     for obj in scene.objects:
-        if obj.name != "TreeList Dummy Object":
+        if obj.name != "Matalogue Dummy Object":
             for slot in obj.material_slots:
                 if slot.material == mat:
                     return True
@@ -81,14 +81,14 @@ def material_in_cur_scene(mat):
 def material_on_sel_obj(mat):
     selection = bpy.context.selected_objects
     for obj in selection:
-        if obj.name != "TreeList Dummy Object":
+        if obj.name != "Matalogue Dummy Object":
             for slot in obj.material_slots:
                 if slot.material == mat:
                     return True
     return False
 
 def get_materials():
-    settings = bpy.context.window_manager.treelist_settings
+    settings = bpy.context.window_manager.matalogue_settings
     materials = []
     for mat in bpy.data.materials:
         conditions = [
@@ -108,17 +108,17 @@ def dummy_object(delete=False):
 
     if delete:
         for obj in scene.objects:
-            if "TreeList Dummy Object" in obj.name:
+            if "Matalogue Dummy Object" in obj.name:
                 scene.objects.unlink(obj)
         return "DONE"
     
     dummy = None
-    previous_dummy = [obj for obj in bpy.data.objects if obj.name == "TreeList Dummy Object"]
+    previous_dummy = [obj for obj in bpy.data.objects if obj.name == "Matalogue Dummy Object"]
     if previous_dummy:
         dummy = previous_dummy[0]
     else:
-        m = bpy.data.meshes.new("TreeList Dummy Mesh")
-        dummy = bpy.data.objects.new("TreeList Dummy Object", m)
+        m = bpy.data.meshes.new("Matalogue Dummy Mesh")
+        dummy = bpy.data.objects.new("Matalogue Dummy Object", m)
 
     if dummy not in list(obj for obj in scene.objects):
         scene.objects.link(dummy)
@@ -139,7 +139,7 @@ def dummy_object(delete=False):
 class TLGoToMat(bpy.types.Operator):
 
     'Show the nodes for this material'
-    bl_idname = 'treelist.goto_mat'
+    bl_idname = 'matalogue.goto_mat'
     bl_label = 'Go To Material'
     mat = bpy.props.StringProperty(default = "")
 
@@ -180,7 +180,7 @@ class TLGoToMat(bpy.types.Operator):
 class TLGoToLight(bpy.types.Operator):
 
     'Show the nodes for this material'
-    bl_idname = 'treelist.goto_light'
+    bl_idname = 'matalogue.goto_light'
     bl_label = 'Go To Material'
     light = bpy.props.StringProperty(default = "")
     world = bpy.props.BoolProperty(default = False)
@@ -202,7 +202,7 @@ class TLGoToLight(bpy.types.Operator):
 class TLGoToComp(bpy.types.Operator):
 
     'Show the nodes for this material'
-    bl_idname = 'treelist.goto_comp'
+    bl_idname = 'matalogue.goto_comp'
     bl_label = 'Go To Composite'
     scene = bpy.props.StringProperty(default = "")
 
@@ -218,7 +218,7 @@ class TLGoToComp(bpy.types.Operator):
 # UI
 #####################################################################
 
-class TreeListMaterials(bpy.types.Panel):
+class MatalogueMaterials(bpy.types.Panel):
 
     bl_label = "Materials"
     bl_space_type = "NODE_EDITOR"
@@ -230,7 +230,7 @@ class TreeListMaterials(bpy.types.Panel):
         return context.scene.render.engine == 'CYCLES'
 
     def draw(self, context):
-        settings = context.window_manager.treelist_settings
+        settings = context.window_manager.matalogue_settings
         scene = context.scene
         layout = self.layout
         materials = get_materials()
@@ -245,13 +245,13 @@ class TreeListMaterials(bpy.types.Panel):
                 icon_val = 1
                 print ("WARNING [Mat Panel]: Could not get icon value for %s" % name)
             if mat.users:
-                op = col.operator('treelist.goto_mat', text=name, emboss=(mat==context.space_data.id), icon_value=icon_val)
+                op = col.operator('matalogue.goto_mat', text=name, emboss=(mat==context.space_data.id), icon_value=icon_val)
                 op.mat = name
             else:
                 row = col.row(align=True)
-                op = row.operator('treelist.goto_mat', text=name, emboss=(mat==context.space_data.id), icon_value=icon_val)
+                op = row.operator('matalogue.goto_mat', text=name, emboss=(mat==context.space_data.id), icon_value=icon_val)
                 op.mat = name
-                op = row.operator('treelist.goto_mat', text="", emboss=(mat==context.space_data.id), icon='ERROR')
+                op = row.operator('matalogue.goto_mat', text="", emboss=(mat==context.space_data.id), icon='ERROR')
                 op.mat = name
 
         if not materials:
@@ -272,7 +272,7 @@ class TreeListMaterials(bpy.types.Panel):
             r.prop(settings, "show_zero_users")
 
 
-class TreeListLighting(bpy.types.Panel):
+class MatalogueLighting(bpy.types.Panel):
 
     bl_label = "Lighting"
     bl_space_type = "NODE_EDITOR"
@@ -293,16 +293,16 @@ class TreeListLighting(bpy.types.Panel):
         for light in lights:
             if light.data.use_nodes:
                 name = light.name
-                op = col.operator('treelist.goto_light', text=name, emboss=(light.data==context.space_data.id), icon='LAMP_%s' % light.data.type)
+                op = col.operator('matalogue.goto_light', text=name, emboss=(light.data==context.space_data.id), icon='LAMP_%s' % light.data.type)
                 op.light = name
                 op.world = False
 
         if context.scene.world.use_nodes:
-            op = col.operator('treelist.goto_light', text="World", emboss=(context.scene.world==context.space_data.id), icon='WORLD')
+            op = col.operator('matalogue.goto_light', text="World", emboss=(context.scene.world==context.space_data.id), icon='WORLD')
             op.world = True
 
 
-class TreeListCompositing(bpy.types.Panel):
+class MatalogueCompositing(bpy.types.Panel):
 
     bl_label = "Compositing"
     bl_space_type = "NODE_EDITOR"
@@ -317,7 +317,7 @@ class TreeListCompositing(bpy.types.Panel):
 
         for sc in scenes:
             name = sc.name
-            op = col.operator('treelist.goto_comp', text=name, emboss=(sc==context.space_data.id), icon='SCENE_DATA')
+            op = col.operator('matalogue.goto_comp', text=name, emboss=(sc==context.space_data.id), icon='SCENE_DATA')
             op.scene = name
 
 
@@ -328,10 +328,10 @@ class TreeListCompositing(bpy.types.Panel):
 def register():
     bpy.utils.register_module(__name__)
 
-    bpy.types.WindowManager.treelist_settings = bpy.props.PointerProperty(type=TreeListSettings)
+    bpy.types.WindowManager.matalogue_settings = bpy.props.PointerProperty(type=MatalogueSettings)
 
 def unregister():
-    del bpy.types.WindowManager.treelist_settings
+    del bpy.types.WindowManager.matalogue_settings
 
     bpy.utils.unregister_module(__name__)
 
