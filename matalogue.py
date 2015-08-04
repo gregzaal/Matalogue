@@ -33,6 +33,7 @@ import bpy
 
 '''
 TODOs:
+    Option to list only visible layers
     Show list of groups
     Assign material to selected objects
     Recenter view (don't change zoom) (add preference to disable) - talk to devs about making space_data.edit_tree.view_center editable
@@ -47,22 +48,22 @@ class MatalogueSettings(bpy.types.PropertyGroup):
     expand_mat_options = bpy.props.BoolProperty(
         name="Options",
         default=False,
-        description="Show settings for controlling which trees are listed")
+        description="Show settings for controlling which materials are listed")
 
     selected_only = bpy.props.BoolProperty(
         name="Selected Objects Only",
         default=False,
-        description="Only show trees used by objects that are selected")
+        description="Only show materials used by objects that are selected")
 
     all_scenes = bpy.props.BoolProperty(
         name="All Scenes",
         default=False,
-        description="Show trees from all the scenes (not just the current one). (\"Selected Objects Only\" must be disabled)")
+        description="Show materials from all the scenes (not just the current one). (\"Selected Objects Only\" must be disabled)")
 
     show_zero_users = bpy.props.BoolProperty(
-        name="Show 0-User Trees",
+        name="0-User Materials",
         default=False,
-        description="Also show trees that have no users. (\"All Scenes\" must be enabled)")
+        description="Also show materials that have no users. (\"All Scenes\" must be enabled)")
 
 
 #####################################################################
