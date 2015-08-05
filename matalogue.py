@@ -24,8 +24,8 @@ bl_info = {
     "blender": (2, 75, 0),
     "location": "Node Editor > Tools",
     "warning": "",
-    "wiki_url": "",
-    "tracker_url": "",
+    "wiki_url": "https://github.com/gregzaal/Matalogue",
+    "tracker_url": "https://github.com/gregzaal/Matalogue/issues",
     "category": "Node"}
 
 import bpy
