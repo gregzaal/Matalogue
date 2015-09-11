@@ -4,7 +4,7 @@ A Blender add-on that displays a list of materials and other node trees right in
 
 This makes it easier to **switch between different materials** while shading, and different compositing setups while working with multiple scenes.
 
-### [Download Latest Version](https://raw.githubusercontent.com/gregzaal/Matalogue/master/matalogue.py)
+### [Download Latest Version](http://bit.ly/matalogue_download)
 
 ![demo](https://raw.githubusercontent.com/gregzaal/Matalogue/master/demo.gif)
 
