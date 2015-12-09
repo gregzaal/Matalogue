@@ -33,10 +33,8 @@ import bpy
 
 '''
 TODOs:
-    Show list of groups
     Assign material to selected objects
     Recenter view (don't change zoom) (add preference to disable) - talk to devs about making space_data.edit_tree.view_center editable
-    User preference for which panels are collapsed/expanded by default
     Create new material and optionally...
         assign to selected objects
         duplicate from active
@@ -200,6 +198,27 @@ class TLGoToMat(bpy.types.Operator):
         return {'FINISHED'}
 
 
+class TLGoToGroup(bpy.types.Operator):
+
+    'Show the nodes inside this group'
+    bl_idname = 'matalogue.goto_group'
+    bl_label = 'Go To Group'
+    tree_type = bpy.props.StringProperty(default = "")
+    tree = bpy.props.StringProperty(default = "")
+
+    def execute(self, context):
+        try:  # Go up one group as many times as possible - error will occur when the top level is reached
+            while True:
+                bpy.ops.node.tree_path_parent()
+        except:
+            pass
+
+        context.space_data.tree_type = self.tree_type
+        context.space_data.path.append(bpy.data.node_groups[self.tree])
+
+        return {'FINISHED'}
+
+
 class TLGoToLight(bpy.types.Operator):
 
     'Show the nodes for this material'
@@ -296,6 +315,43 @@ class MatalogueMaterials(bpy.types.Panel):
             r = scol.row()
             r.enabled = (settings.all_scenes and not settings.selected_only)
             r.prop(settings, "show_zero_users")
+
+
+class MatalogueGroups(bpy.types.Panel):
+
+    bl_label = "Groups"
+    bl_space_type = "NODE_EDITOR"
+    bl_region_type = "TOOLS"
+    bl_category = "Trees"
+
+    def draw(self, context):
+        layout = self.layout
+
+        col = layout.column(align=True)
+
+        shader_groups = []
+        comp_groups = []
+        for g in bpy.data.node_groups:
+            if g.type == 'SHADER':
+                shader_groups.append(g)
+            elif g.type == 'COMPOSITING':
+                comp_groups.append(g)
+
+        # col.label("Shader Groups")
+        for g in shader_groups:
+            op = col.operator('matalogue.goto_group', text=g.name, emboss=(context.space_data.path[-1].node_tree.name==g.name), icon='NODETREE')
+            op.tree_type = "ShaderNodeTree"
+            op.tree = g.name
+
+        col.separator()
+        col.separator()
+        col.separator()
+
+        # col.label("Compositing Groups")
+        for g in comp_groups:
+            op = col.operator('matalogue.goto_group', text=g.name, emboss=(context.space_data.path[-1].node_tree.name==g.name), icon='NODETREE')
+            op.tree_type = "CompositorNodeTree"
+            op.tree = g.name
 
 
 class MatalogueLighting(bpy.types.Panel):
