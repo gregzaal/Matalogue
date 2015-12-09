@@ -33,7 +33,6 @@ import bpy
 
 '''
 TODOs:
-    Option to list only visible layers
     Show list of groups
     Assign material to selected objects
     Recenter view (don't change zoom) (add preference to disable) - talk to devs about making space_data.edit_tree.view_center editable
@@ -54,6 +53,11 @@ class MatalogueSettings(bpy.types.PropertyGroup):
         name="Selected Objects Only",
         default=False,
         description="Only show materials used by objects that are selected")
+
+    vis_layers_only = bpy.props.BoolProperty(
+        name="Visible Layers Only",
+        default=False,
+        description="Only show materials used by objects that are on a visible layer. (\"Selected Objects Only\" must be disabled)")
 
     all_scenes = bpy.props.BoolProperty(
         name="All Scenes",
@@ -88,6 +92,23 @@ def material_on_sel_obj(mat):
                     return True
     return False
 
+def material_on_vis_layer(mat):
+    settings = bpy.context.window_manager.matalogue_settings
+    scenes = bpy.data.scenes if settings.all_scenes else [bpy.context.scene]
+    for scene in bpy.data.scenes:
+        objs_on_vis_layer = []
+        for obj in scene.objects:
+            if obj.name != "Matalogue Dummy Object":
+                for i, sl in enumerate(scene.layers):
+                    if sl and obj.layers[i]:
+                        objs_on_vis_layer.append(obj)
+                        break
+        for obj in objs_on_vis_layer:
+            for slot in obj.material_slots:
+                if slot.material == mat:
+                    return True
+    return False
+
 def get_materials():
     settings = bpy.context.window_manager.matalogue_settings
     materials = []
@@ -96,6 +117,7 @@ def get_materials():
             (settings.show_zero_users or mat.users),
             (settings.all_scenes or material_in_cur_scene(mat)),
             (not settings.selected_only or material_on_sel_obj(mat)),
+            (not settings.vis_layers_only or material_on_vis_layer(mat)),
             not mat.library,  # don't allow editing of linked library materials - TODO make this optional (can help to be able to look at the nodes, even if you can't edit it)
             mat.use_nodes]
         if all(conditions):
@@ -265,6 +287,9 @@ class MatalogueMaterials(bpy.types.Panel):
         scol.prop(settings, 'expand_mat_options', toggle=True, icon='TRIA_DOWN' if settings.expand_mat_options else 'TRIA_RIGHT')
         if settings.expand_mat_options:
             scol.prop(settings, "selected_only")
+            r = scol.row()
+            r.enabled = not settings.selected_only
+            r.prop(settings, "vis_layers_only")
             r = scol.row()
             r.enabled = not settings.selected_only
             r.prop(settings, "all_scenes")
