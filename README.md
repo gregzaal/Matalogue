@@ -10,7 +10,6 @@ This makes it easier to **switch between different materials** while shading, an
 
 Still to do:
 
-* Show list of node groups
 * Functions to assign materials to objects
 * Create new materials right from the node editor and optionally...
 * Center and zoom view to the nodes (requires new API access)
