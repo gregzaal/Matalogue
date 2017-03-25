@@ -20,7 +20,7 @@ bl_info = {
     "name": "Matalogue",
     "description": " Catalogue of node trees in the toolbar to switch between quickly",
     "author": "Greg Zaal",
-    "version": (1, 1),
+    "version": (1, 2),
     "blender": (2, 76, 0),
     "location": "Node Editor > Toolbar (T) > Trees",
     "warning": "",
@@ -29,8 +29,6 @@ bl_info = {
     "category": "Node"}
 
 import bpy
-
-
 '''
 TODOs:
     Assign material to selected objects
@@ -81,6 +79,7 @@ def material_in_cur_scene(mat):
                     return True
     return False
 
+
 def material_on_sel_obj(mat):
     selection = bpy.context.selected_objects
     for obj in selection:
@@ -89,6 +88,7 @@ def material_on_sel_obj(mat):
                 if slot.material == mat:
                     return True
     return False
+
 
 def material_on_vis_layer(mat):
     settings = bpy.context.window_manager.matalogue_settings
@@ -107,6 +107,26 @@ def material_on_vis_layer(mat):
                     return True
     return False
 
+
+
+CheckedGroupNamesList=[]
+MaterialsFromGroup = set()
+def findMaterialsInGroupInstance(empty):
+    if empty.dupli_group.name in CheckedGroupNamesList:
+        print('already checked group: '+empty.dupli_group.name)
+        return None
+    for obj in bpy.data.groups[empty.dupli_group.name].objects :
+        if obj.dupli_group and obj.type == 'EMPTY':
+            return findMaterialsInGroupInstance(obj)
+        elif obj.type=="MESH":
+            for slot in obj.material_slots:
+                if slot.material:
+                    MaterialsFromGroup.add(slot.material)
+                    print('added material to list: '+slot.material.name)
+    CheckedGroupNamesList.append(empty.dupli_group.name) #or no empty mat in group
+    print('No material found in group'+ empty.dupli_group.name)
+    return None
+
 def get_materials():
     settings = bpy.context.window_manager.matalogue_settings
     materials = []
@@ -116,12 +136,21 @@ def get_materials():
             (settings.all_scenes or material_in_cur_scene(mat)),
             (not settings.selected_only or material_on_sel_obj(mat)),
             (not settings.vis_layers_only or material_on_vis_layer(mat)),
-            not mat.library,  # don't allow editing of linked library materials - TODO make this optional (can help to be able to look at the nodes, even if you can't edit it)
+            not mat.library,
+            # don't allow editing of linked library materials - TODO make this optional (can help to be able to look at the nodes, even if you can't edit it)
             mat.use_nodes]
         if all(conditions):
             materials.append(mat)
+    AdditionalMats=set()
+    CheckedGroupNamesList.clear()
+    if settings.selected_only:
+        for obj in bpy.context.selected_objects:
+            if obj.dupli_group and obj.type=='EMPTY':
+                findMaterialsInGroupInstance(obj)
+                AdditionalMats=AdditionalMats|MaterialsFromGroup
+                MaterialsFromGroup.clear()
+    return list(set(materials)|AdditionalMats)
 
-    return materials
 
 def dummy_object(delete=False):
     ''' Return the existing dummy object, or create one if it doesn't exist. '''
@@ -132,7 +161,7 @@ def dummy_object(delete=False):
             if "Matalogue Dummy Object" in obj.name:
                 scene.objects.unlink(obj)
         return "DONE"
-    
+
     dummy = None
     previous_dummy = [obj for obj in bpy.data.objects if obj.name == "Matalogue Dummy Object"]
     if previous_dummy:
@@ -149,7 +178,7 @@ def dummy_object(delete=False):
 
     if len(dummy.material_slots) == 0:
         bpy.ops.object.material_slot_add()
-        
+
     return dummy
 
 
@@ -158,11 +187,10 @@ def dummy_object(delete=False):
 #####################################################################
 
 class TLGoToMat(bpy.types.Operator):
-
     'Show the nodes for this material'
     bl_idname = 'matalogue.goto_mat'
     bl_label = 'Go To Material'
-    mat = bpy.props.StringProperty(default = "")
+    mat = bpy.props.StringProperty(default="")
 
     def execute(self, context):
         dummy_object(delete=True)
@@ -170,6 +198,7 @@ class TLGoToMat(bpy.types.Operator):
         context.space_data.tree_type = 'ShaderNodeTree'
         context.space_data.shader_type = 'OBJECT'
         mat = bpy.data.materials[self.mat]
+
 
         objs_with_mat = 0
         active_set = False
@@ -199,12 +228,11 @@ class TLGoToMat(bpy.types.Operator):
 
 
 class TLGoToGroup(bpy.types.Operator):
-
     'Show the nodes inside this group'
     bl_idname = 'matalogue.goto_group'
     bl_label = 'Go To Group'
-    tree_type = bpy.props.StringProperty(default = "")
-    tree = bpy.props.StringProperty(default = "")
+    tree_type = bpy.props.StringProperty(default="")
+    tree = bpy.props.StringProperty(default="")
 
     def execute(self, context):
         try:  # Go up one group as many times as possible - error will occur when the top level is reached
@@ -220,12 +248,11 @@ class TLGoToGroup(bpy.types.Operator):
 
 
 class TLGoToLight(bpy.types.Operator):
-
     'Show the nodes for this material'
     bl_idname = 'matalogue.goto_light'
     bl_label = 'Go To Material'
-    light = bpy.props.StringProperty(default = "")
-    world = bpy.props.BoolProperty(default = False)
+    light = bpy.props.StringProperty(default="")
+    world = bpy.props.BoolProperty(default=False)
 
     def execute(self, context):
         dummy_object(delete=True)
@@ -242,11 +269,10 @@ class TLGoToLight(bpy.types.Operator):
 
 
 class TLGoToComp(bpy.types.Operator):
-
     'Show the nodes for this material'
     bl_idname = 'matalogue.goto_comp'
     bl_label = 'Go To Composite'
-    scene = bpy.props.StringProperty(default = "")
+    scene = bpy.props.StringProperty(default="")
 
     def execute(self, context):
         context.space_data.tree_type = 'CompositorNodeTree'
@@ -261,7 +287,6 @@ class TLGoToComp(bpy.types.Operator):
 #####################################################################
 
 class MatalogueMaterials(bpy.types.Panel):
-
     bl_label = "Materials"
     bl_space_type = "NODE_EDITOR"
     bl_region_type = "TOOLS"
@@ -285,15 +310,17 @@ class MatalogueMaterials(bpy.types.Panel):
                 icon_val = layout.icon(mat)
             except:
                 icon_val = 1
-                print ("WARNING [Mat Panel]: Could not get icon value for %s" % name)
+                print("WARNING [Mat Panel]: Could not get icon value for %s" % name)
             if mat.users:
-                op = col.operator('matalogue.goto_mat', text=name, emboss=(mat==context.space_data.id), icon_value=icon_val)
+                op = col.operator('matalogue.goto_mat', text=name, emboss=(mat == context.space_data.id),
+                                  icon_value=icon_val)
                 op.mat = name
             else:
                 row = col.row(align=True)
-                op = row.operator('matalogue.goto_mat', text=name, emboss=(mat==context.space_data.id), icon_value=icon_val)
+                op = row.operator('matalogue.goto_mat', text=name, emboss=(mat == context.space_data.id),
+                                  icon_value=icon_val)
                 op.mat = name
-                op = row.operator('matalogue.goto_mat', text="", emboss=(mat==context.space_data.id), icon='ERROR')
+                op = row.operator('matalogue.goto_mat', text="", emboss=(mat == context.space_data.id), icon='ERROR')
                 op.mat = name
 
         if not materials:
@@ -303,7 +330,8 @@ class MatalogueMaterials(bpy.types.Panel):
 
         box = col.box()
         scol = box.column(align=True)
-        scol.prop(settings, 'expand_mat_options', toggle=True, icon='TRIA_DOWN' if settings.expand_mat_options else 'TRIA_RIGHT')
+        scol.prop(settings, 'expand_mat_options', toggle=True,
+                  icon='TRIA_DOWN' if settings.expand_mat_options else 'TRIA_RIGHT')
         if settings.expand_mat_options:
             scol.prop(settings, "selected_only")
             r = scol.row()
@@ -318,7 +346,6 @@ class MatalogueMaterials(bpy.types.Panel):
 
 
 class MatalogueGroups(bpy.types.Panel):
-
     bl_label = "Groups"
     bl_space_type = "NODE_EDITOR"
     bl_region_type = "TOOLS"
@@ -339,7 +366,8 @@ class MatalogueGroups(bpy.types.Panel):
 
         # col.label("Shader Groups")
         for g in shader_groups:
-            op = col.operator('matalogue.goto_group', text=g.name, emboss=(context.space_data.path[-1].node_tree.name==g.name), icon='NODETREE')
+            op = col.operator('matalogue.goto_group', text=g.name,
+                              emboss=(context.space_data.path[-1].node_tree.name == g.name), icon='NODETREE')
             op.tree_type = "ShaderNodeTree"
             op.tree = g.name
 
@@ -349,13 +377,13 @@ class MatalogueGroups(bpy.types.Panel):
 
         # col.label("Compositing Groups")
         for g in comp_groups:
-            op = col.operator('matalogue.goto_group', text=g.name, emboss=(context.space_data.path[-1].node_tree.name==g.name), icon='NODETREE')
+            op = col.operator('matalogue.goto_group', text=g.name,
+                              emboss=(context.space_data.path[-1].node_tree.name == g.name), icon='NODETREE')
             op.tree_type = "CompositorNodeTree"
             op.tree = g.name
 
 
 class MatalogueLighting(bpy.types.Panel):
-
     bl_label = "Lighting"
     bl_space_type = "NODE_EDITOR"
     bl_region_type = "TOOLS"
@@ -375,17 +403,18 @@ class MatalogueLighting(bpy.types.Panel):
         for light in lights:
             if light.data.use_nodes:
                 name = light.name
-                op = col.operator('matalogue.goto_light', text=name, emboss=(light.data==context.space_data.id), icon='LAMP_%s' % light.data.type)
+                op = col.operator('matalogue.goto_light', text=name, emboss=(light.data == context.space_data.id),
+                                  icon='LAMP_%s' % light.data.type)
                 op.light = name
                 op.world = False
 
         if context.scene.world.use_nodes:
-            op = col.operator('matalogue.goto_light', text="World", emboss=(context.scene.world==context.space_data.id), icon='WORLD')
+            op = col.operator('matalogue.goto_light', text="World",
+                              emboss=(context.scene.world == context.space_data.id), icon='WORLD')
             op.world = True
 
 
 class MatalogueCompositing(bpy.types.Panel):
-
     bl_label = "Compositing"
     bl_space_type = "NODE_EDITOR"
     bl_region_type = "TOOLS"
@@ -399,7 +428,7 @@ class MatalogueCompositing(bpy.types.Panel):
 
         for sc in scenes:
             name = sc.name
-            op = col.operator('matalogue.goto_comp', text=name, emboss=(sc==context.space_data.id), icon='SCENE_DATA')
+            op = col.operator('matalogue.goto_comp', text=name, emboss=(sc == context.space_data.id), icon='SCENE_DATA')
             op.scene = name
 
 
@@ -412,10 +441,12 @@ def register():
 
     bpy.types.WindowManager.matalogue_settings = bpy.props.PointerProperty(type=MatalogueSettings)
 
+
 def unregister():
     del bpy.types.WindowManager.matalogue_settings
 
     bpy.utils.unregister_module(__name__)
+
 
 if __name__ == "__main__":
     register()
