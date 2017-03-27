@@ -29,6 +29,7 @@ bl_info = {
     "category": "Node"}
 
 import bpy
+
 '''
 TODOs:
     Assign material to selected objects
@@ -91,8 +92,6 @@ def material_on_sel_obj(mat):
 
 
 def material_on_vis_layer(mat):
-    settings = bpy.context.window_manager.matalogue_settings
-    scenes = bpy.data.scenes if settings.all_scenes else [bpy.context.scene]
     for scene in bpy.data.scenes:
         objs_on_vis_layer = []
         for obj in scene.objects:
@@ -108,24 +107,25 @@ def material_on_vis_layer(mat):
     return False
 
 
+checked_groups_names_list = []
+materials_from_group = set()
 
-CheckedGroupNamesList=[]
-MaterialsFromGroup = set()
-def findMaterialsInGroupInstance(empty):
-    if empty.dupli_group.name in CheckedGroupNamesList:
-        print('already checked group: '+empty.dupli_group.name)
+
+def find_materials_in_groupinstances(empty):
+    if empty.dupli_group.name in checked_groups_names_list:
+        # print('already checked group: ' + empty.dupli_group.name)
         return None
-    for obj in bpy.data.groups[empty.dupli_group.name].objects :
+    for obj in bpy.data.groups[empty.dupli_group.name].objects:
         if obj.dupli_group and obj.type == 'EMPTY':
-            return findMaterialsInGroupInstance(obj)
-        elif obj.type=="MESH":
+            return find_materials_in_groupinstances(obj)
+        elif obj.type == "MESH":
             for slot in obj.material_slots:
                 if slot.material:
-                    MaterialsFromGroup.add(slot.material)
-                    print('added material to list: '+slot.material.name)
-    CheckedGroupNamesList.append(empty.dupli_group.name) #or no empty mat in group
-    print('No material found in group'+ empty.dupli_group.name)
+                    materials_from_group.add(slot.material)
+                    # print('added material to list: ' + slot.material.name)
+    checked_groups_names_list.append(empty.dupli_group.name)  # or no empty mat in group
     return None
+
 
 def get_materials():
     settings = bpy.context.window_manager.matalogue_settings
@@ -141,15 +141,15 @@ def get_materials():
             mat.use_nodes]
         if all(conditions):
             materials.append(mat)
-    AdditionalMats=set()
-    CheckedGroupNamesList.clear()
+    additional_mats = set()
+    checked_groups_names_list.clear()
     if settings.selected_only:
         for obj in bpy.context.selected_objects:
-            if obj.dupli_group and obj.type=='EMPTY':
-                findMaterialsInGroupInstance(obj)
-                AdditionalMats=AdditionalMats|MaterialsFromGroup
-                MaterialsFromGroup.clear()
-    return list(set(materials)|AdditionalMats)
+            if obj.dupli_group and obj.type == 'EMPTY':
+                find_materials_in_groupinstances(obj)
+                additional_mats = additional_mats | materials_from_group
+                materials_from_group.clear()
+    return list(set(materials) | additional_mats)
 
 
 def dummy_object(delete=False):
@@ -198,7 +198,6 @@ class TLGoToMat(bpy.types.Operator):
         context.space_data.tree_type = 'ShaderNodeTree'
         context.space_data.shader_type = 'OBJECT'
         mat = bpy.data.materials[self.mat]
-
 
         objs_with_mat = 0
         active_set = False
@@ -298,7 +297,6 @@ class MatalogueMaterials(bpy.types.Panel):
 
     def draw(self, context):
         settings = context.window_manager.matalogue_settings
-        scene = context.scene
         layout = self.layout
         materials = get_materials()
 
