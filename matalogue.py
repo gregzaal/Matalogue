@@ -20,7 +20,7 @@ bl_info = {
     "name": "Matalogue",
     "description": " Catalogue of node trees in the toolbar to switch between quickly",
     "author": "Greg Zaal",
-    "version": (1, 1),
+    "version": (1, 2),
     "blender": (2, 76, 0),
     "location": "Node Editor > Toolbar (T) > Trees",
     "warning": "",
@@ -91,8 +91,6 @@ def material_on_sel_obj(mat):
     return False
 
 def material_on_vis_layer(mat):
-    settings = bpy.context.window_manager.matalogue_settings
-    scenes = bpy.data.scenes if settings.all_scenes else [bpy.context.scene]
     for scene in bpy.data.scenes:
         objs_on_vis_layer = []
         for obj in scene.objects:
@@ -107,6 +105,24 @@ def material_on_vis_layer(mat):
                     return True
     return False
 
+checked_groups_names_list = []
+materials_from_group = set()
+
+def find_materials_in_groupinstances(empty):
+    if empty.dupli_group.name in checked_groups_names_list:
+        # print('already checked group: ' + empty.dupli_group.name)
+        return None
+    for obj in bpy.data.groups[empty.dupli_group.name].objects:
+        if obj.dupli_group and obj.type == 'EMPTY':
+            return find_materials_in_groupinstances(obj)
+        elif obj.type == "MESH":
+            for slot in obj.material_slots:
+                if slot.material:
+                    materials_from_group.add(slot.material)
+                    # print('added material to list: ' + slot.material.name)
+    checked_groups_names_list.append(empty.dupli_group.name)  # or no empty mat in group
+    return None
+
 def get_materials():
     settings = bpy.context.window_manager.matalogue_settings
     materials = []
@@ -120,8 +136,15 @@ def get_materials():
             mat.use_nodes]
         if all(conditions):
             materials.append(mat)
-
-    return materials
+    additional_mats = set()
+    checked_groups_names_list.clear()
+    if settings.selected_only:
+        for obj in bpy.context.selected_objects:
+            if obj.dupli_group and obj.type == 'EMPTY':
+                find_materials_in_groupinstances(obj)
+                additional_mats = additional_mats | materials_from_group
+                materials_from_group.clear()
+    return list(set(materials) | additional_mats)
 
 def dummy_object(delete=False):
     ''' Return the existing dummy object, or create one if it doesn't exist. '''
@@ -132,7 +155,7 @@ def dummy_object(delete=False):
             if "Matalogue Dummy Object" in obj.name:
                 scene.objects.unlink(obj)
         return "DONE"
-    
+
     dummy = None
     previous_dummy = [obj for obj in bpy.data.objects if obj.name == "Matalogue Dummy Object"]
     if previous_dummy:
@@ -149,7 +172,7 @@ def dummy_object(delete=False):
 
     if len(dummy.material_slots) == 0:
         bpy.ops.object.material_slot_add()
-        
+
     return dummy
 
 
@@ -273,7 +296,6 @@ class MatalogueMaterials(bpy.types.Panel):
 
     def draw(self, context):
         settings = context.window_manager.matalogue_settings
-        scene = context.scene
         layout = self.layout
         materials = get_materials()
 
@@ -339,7 +361,10 @@ class MatalogueGroups(bpy.types.Panel):
 
         # col.label("Shader Groups")
         for g in shader_groups:
-            op = col.operator('matalogue.goto_group', text=g.name, emboss=(context.space_data.path[-1].node_tree.name==g.name), icon='NODETREE')
+            emboss = False
+            if len(context.space_data.path) > 0:
+                emboss = context.space_data.path[-1].node_tree.name==g.name
+            op = col.operator('matalogue.goto_group', text=g.name, emboss=emboss, icon='NODETREE')
             op.tree_type = "ShaderNodeTree"
             op.tree = g.name
 
@@ -349,7 +374,10 @@ class MatalogueGroups(bpy.types.Panel):
 
         # col.label("Compositing Groups")
         for g in comp_groups:
-            op = col.operator('matalogue.goto_group', text=g.name, emboss=(context.space_data.path[-1].node_tree.name==g.name), icon='NODETREE')
+            emboss = False
+            if len(context.space_data.path) > 0:
+                emboss = context.space_data.path[-1].node_tree.name==g.name
+            op = col.operator('matalogue.goto_group', text=g.name, emboss=emboss, icon='NODETREE')
             op.tree_type = "CompositorNodeTree"
             op.tree = g.name
 
