@@ -144,7 +144,9 @@ def get_materials():
                 find_materials_in_groupinstances(obj)
                 additional_mats = additional_mats | materials_from_group
                 materials_from_group.clear()
-    return list(set(materials) | additional_mats)
+    all_mats = list(set(materials) | additional_mats)
+    all_mats = sorted(all_mats, key=lambda x: x.name.lower())
+    return all_mats
 
 def dummy_object(delete=False):
     ''' Return the existing dummy object, or create one if it doesn't exist. '''
