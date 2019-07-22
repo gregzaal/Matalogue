@@ -222,7 +222,7 @@ class MATALOGUE_OT_go_to_material(bpy.types.Operator):
 
         objs_with_mat = 0
         active_set = False
-        for obj in scene.objects:
+        for obj in context.view_layer.objects:
             obj_materials = [slot.material for slot in obj.material_slots]
             if mat in obj_materials:
                 objs_with_mat += 1
@@ -427,7 +427,7 @@ class MATALOGUE_PT_lighting(bpy.types.Panel):
     def draw(self, context):
         scene = context.scene
         layout = self.layout
-        lights = [obj for obj in scene.objects if obj.type == 'LIGHT']
+        lights = [obj for obj in context.view_layer.objects if obj.type == 'LIGHT']
 
         col = layout.column(align=True)
 
