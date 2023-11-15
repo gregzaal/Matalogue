@@ -279,6 +279,7 @@ class MATALOGUE_OT_go_to_geonodes(bpy.types.Operator):
     'Show this Geometry Nodes tree'
     bl_idname = 'matalogue.goto_geo'
     bl_label = 'Go To Geo Nodes'
+    first_run = True
 
     tree: bpy.props.StringProperty(default="")
     is_tool: bpy.props.BoolProperty(default=False)
@@ -313,6 +314,15 @@ class MATALOGUE_OT_go_to_geonodes(bpy.types.Operator):
                                 break
                 else:
                     obj.select_set(False)
+            if objs_with_modifier == 0:
+                context.space_data.path.append(g)
+
+        current_tree = context.space_data.path[-1].node_tree if len(context.space_data.path) > 0 else None
+        if self.first_run and current_tree is not g:
+            # Sometimes we need to run this twice? Not sure why...
+            self.first_run = False
+            self.execute(context)
+
         return {'FINISHED'}
 
 
