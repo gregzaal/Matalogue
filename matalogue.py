@@ -31,16 +31,6 @@ bl_info = {
 import bpy
 
 
-'''
-TODOs:
-    Assign material to selected objects
-    Recenter view (don't change zoom) - talk to devs about making space_data.edit_tree.view_center editable
-    Create new material and optionally...
-        assign to selected objects
-        duplicate from active
-'''
-
-
 class MatalogueSettings(bpy.types.PropertyGroup):
     expand_mat_options: bpy.props.BoolProperty(
         name="Options",
