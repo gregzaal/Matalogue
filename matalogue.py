@@ -112,7 +112,6 @@ def obj_in_visible_collection(obj, scene):
 
 
 def material_on_vis_collection(mat):
-    settings = bpy.context.window_manager.matalogue_settings
     for scene in bpy.data.scenes:
         objs_on_vis_layer = []
         for obj in scene.objects:
@@ -215,7 +214,6 @@ class MATALOGUE_OT_go_to_material(bpy.types.Operator):
 
     def execute(self, context):
         dummy_object(delete=True)
-        scene = context.scene
         context.space_data.tree_type = 'ShaderNodeTree'
         context.space_data.shader_type = 'OBJECT'
         mat = bpy.data.materials[self.mat]
@@ -425,7 +423,6 @@ class MATALOGUE_PT_lighting(bpy.types.Panel):
     bl_category = "Trees"
 
     def draw(self, context):
-        scene = context.scene
         layout = self.layout
         lights = [obj for obj in context.view_layer.objects if obj.type == 'LIGHT']
 
