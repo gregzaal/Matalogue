@@ -152,7 +152,7 @@ def get_materials():
             (settings.all_scenes or material_in_cur_scene(mat)),
             (not settings.selected_only or material_on_sel_obj(mat)),
             (not settings.vis_collections_only or material_on_vis_collection(mat)),
-            not mat.library,  # Don't show linked materials since they can't be editted anyway
+            not mat.library,  # Don't show linked materials since they can't be edited anyway
             mat.use_nodes]
         if all(conditions):
             materials.append(mat)
