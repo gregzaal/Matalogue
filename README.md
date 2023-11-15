@@ -4,16 +4,16 @@ A Blender add-on that displays a list of materials and other node trees right in
 
 This makes it easier to **switch between different materials** while shading, and different compositing setups while working with multiple scenes.
 
-### [Download Latest Version](http://bit.ly/matalogue_download) for Blender 2.8
-
-[Download older version](https://raw.githubusercontent.com/gregzaal/Matalogue/e9aaa80e/matalogue.py) compatible with Blender 2.7 and lower.
+### [Download Latest Version](http://bit.ly/matalogue_download) for Blender 4.0
 
 ![demo](https://raw.githubusercontent.com/gregzaal/Matalogue/master/demo.gif)
 
+Older versions:
+* [Blender 2.8 - 3.6](https://raw.githubusercontent.com/gregzaal/Matalogue/4045065/matalogue.py)
+* [Blender 2.7](https://raw.githubusercontent.com/gregzaal/Matalogue/e9aaa80e/matalogue.py)
+
 Still to do:
 
-* Functions to assign materials to objects
-* Create new materials right from the node editor and optionally...
 * Center and zoom view to the nodes (requires new API access)
 
 ----
@@ -24,11 +24,10 @@ Still to do:
 
 There are multiple sources of node trees in Blender, namely:
 
-* Material nodes
-* Lamp nodes
-* Node groups
+* Shader nodes for both materials and lights
+* Geometry nodes
+* Node groups of various types
 * Compositing
-* Texture nodes (*not yet supported*)
 * Freestyle nodes (*not yet supported*)
 
 By clicking on one of the listed items, the Node Editor will switch to that tree and select the related objects.
@@ -41,6 +40,10 @@ Lists all the materials according to the options below. Click on a name to switc
 * **Visible Layers Only** - Only show materials that are assigned to objects that are on one of the visible layers. Take note that if *All Scenes* is off, materials on visible layers of other scenes will be shown too.
 * **All Scenes** - Show materials from all scenes, not just the current one. Requires *Selected Objects Only* to be disabled.
 * **0-User Materials** - Show materials that have no users (those that will be deleted when Blender is closed). Requires *All Scenes* to be enabled.
+
+##### Geometry Nodes
+
+Lists all geometry nodes modifiers and tools in the scene.
 
 ##### Groups
 
