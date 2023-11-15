@@ -250,6 +250,7 @@ class MATALOGUE_OT_go_to_group(bpy.types.Operator):
     'Show the nodes inside this group'
     bl_idname = 'matalogue.goto_group'
     bl_label = 'Go To Group'
+    first_run = True
 
     tree_type: bpy.props.StringProperty(default="")
     tree: bpy.props.StringProperty(default="")
@@ -261,9 +262,15 @@ class MATALOGUE_OT_go_to_group(bpy.types.Operator):
         except RuntimeError:
             pass
 
+        g = bpy.data.node_groups[self.tree]
         context.space_data.tree_type = self.tree_type
-        context.space_data.path.append(bpy.data.node_groups[self.tree])
+        context.space_data.path.append(g)
 
+        current_tree = context.space_data.path[-1].node_tree if len(context.space_data.path) > 0 else None
+        if self.first_run and current_tree is not g:
+            # Sometimes we need to run this twice? Not sure why...
+            self.first_run = False
+            self.execute(context)
         return {'FINISHED'}
 
 
