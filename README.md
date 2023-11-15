@@ -14,7 +14,7 @@ Older versions:
 
 Still to do:
 
-* Center and zoom view to the nodes (requires new API access)
+* Center and zoom view to the nodes (requires new API access). As a hack, maybe recenter nodes instead of view?
 
 ----
 

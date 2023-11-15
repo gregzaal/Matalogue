@@ -464,6 +464,49 @@ class MATALOGUE_PT_groups(bpy.types.Panel):
             op.tree = g.name
 
 
+def draw_geonodes_panel(self, context, conditions, inverse=False):
+
+    def draw_item(context, col, g, indent):
+        active = False
+        row = col.row()
+        for i in range(indent):
+            row.label(text="", icon='BLANK1')
+        if len(context.space_data.path) > 0:
+            active = context.space_data.path[-1].node_tree.name == g.name
+        op = row.operator('matalogue.goto_geo', text=g.name, emboss=active, icon=('TOOL_SETTINGS' if g.is_tool
+                                                                                  else 'MODIFIER' if g.is_modifier
+                                                                                  else 'NODETREE'))
+        op.tree = g.name
+        op.is_tool = g.is_tool
+
+        # Node trees in this tree:
+        if active:
+            already_drawn = []
+            for node in g.nodes:
+                if node.type == 'GROUP' and node.node_tree.name not in already_drawn:
+                    draw_item(context, col, node.node_tree, indent + 1)
+                    already_drawn.append(node.node_tree.name)
+
+    layout = self.layout
+
+    col = layout.column(align=True)
+
+    geo_nodes = []
+    for g in bpy.data.node_groups:
+        if g.type == 'GEOMETRY' and any((getattr(g, c) is True for c in conditions)) != inverse:
+            geo_nodes.append(g)
+
+    for g in geo_nodes:
+        draw_item(context, col, g, 0)
+
+
+def poll_geonodes_panel(conditions, inverse=False):
+    for g in bpy.data.node_groups:
+        if g.type == 'GEOMETRY' and any((getattr(g, c) is True for c in conditions)) != inverse:
+            return True
+    return False
+
+
 class MATALOGUE_PT_geonodes(bpy.types.Panel):
 
     bl_label = "Geo Nodes"
@@ -471,24 +514,69 @@ class MATALOGUE_PT_geonodes(bpy.types.Panel):
     bl_region_type = "UI"
     bl_category = "Trees"
 
-    def draw(self, context):
+    def draw_header(self, context):
         layout = self.layout
+        layout.label(text="", icon='GEOMETRY_NODES')
 
-        col = layout.column(align=True)
+    def draw(self, context):
+        pass
 
-        geo_nodes = []
-        for g in bpy.data.node_groups:
-            if g.type == 'GEOMETRY':
-                geo_nodes.append(g)
 
-        for g in geo_nodes:
-            emboss = False
-            if len(context.space_data.path) > 0:
-                emboss = context.space_data.path[-1].node_tree.name == g.name
-            op = col.operator('matalogue.goto_geo', text=g.name, emboss=emboss, icon=('TOOL_SETTINGS' if g.is_tool
-                                                                                      else 'GEOMETRY_NODES'))
-            op.tree = g.name
-            op.is_tool = g.is_tool
+class MATALOGUE_PT_geonodes_modifiers(bpy.types.Panel):
+
+    bl_label = "Modifiers"
+    bl_parent_id = "MATALOGUE_PT_geonodes"
+    bl_space_type = "NODE_EDITOR"
+    bl_region_type = "UI"
+    bl_category = "Trees"
+
+    conditions = ['is_modifier']
+    inverse = False
+
+    @classmethod
+    def poll(self, context):
+        return poll_geonodes_panel(self.conditions, self.inverse)
+
+    def draw(self, context):
+        draw_geonodes_panel(self, context, self.conditions, self.inverse)
+
+
+class MATALOGUE_PT_geonodes_tools(bpy.types.Panel):
+
+    bl_label = "Tools"
+    bl_parent_id = "MATALOGUE_PT_geonodes"
+    bl_space_type = "NODE_EDITOR"
+    bl_region_type = "UI"
+    bl_category = "Trees"
+
+    conditions = ['is_tool']
+    inverse = False
+
+    @classmethod
+    def poll(self, context):
+        return poll_geonodes_panel(self.conditions, self.inverse)
+
+    def draw(self, context):
+        draw_geonodes_panel(self, context, self.conditions, self.inverse)
+
+
+class MATALOGUE_PT_geonodes_groups(bpy.types.Panel):
+
+    bl_label = "Groups"
+    bl_parent_id = "MATALOGUE_PT_geonodes"
+    bl_space_type = "NODE_EDITOR"
+    bl_region_type = "UI"
+    bl_category = "Trees"
+
+    conditions = ['is_modifier', 'is_tool']
+    inverse = True
+
+    @classmethod
+    def poll(self, context):
+        return poll_geonodes_panel(self.conditions, self.inverse)
+
+    def draw(self, context):
+        draw_geonodes_panel(self, context, self.conditions, self.inverse)
 
 
 class MATALOGUE_PT_lighting(bpy.types.Panel):
@@ -559,6 +647,9 @@ classes = [
     MATALOGUE_PT_materials,
     MATALOGUE_PT_groups,
     MATALOGUE_PT_geonodes,
+    MATALOGUE_PT_geonodes_modifiers,
+    MATALOGUE_PT_geonodes_tools,
+    MATALOGUE_PT_geonodes_groups,
     MATALOGUE_PT_lighting,
     MATALOGUE_PT_compositing,
 ]
