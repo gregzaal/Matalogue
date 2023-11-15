@@ -258,7 +258,7 @@ class MATALOGUE_OT_go_to_group(bpy.types.Operator):
         try:  # Go up one group as many times as possible - error will occur when the top level is reached
             while True:
                 bpy.ops.node.tree_path_parent()
-        except:
+        except RuntimeError:
             pass
 
         context.space_data.tree_type = self.tree_type
