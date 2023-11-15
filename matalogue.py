@@ -20,8 +20,8 @@ bl_info = {
     "name": "Matalogue",
     "description": " Catalogue of node trees in the sidebar to switch between quickly",
     "author": "Greg Zaal",
-    "version": (1, 3),
-    "blender": (2, 80, 0),
+    "version": (1, 4),
+    "blender": (4, 0, 0),
     "location": "Node Editor > Sidebar (N) > Trees",
     "warning": "",
     "wiki_url": "https://github.com/gregzaal/Matalogue",
@@ -267,6 +267,48 @@ class MATALOGUE_OT_go_to_group(bpy.types.Operator):
         return {'FINISHED'}
 
 
+class MATALOGUE_OT_go_to_geonodes(bpy.types.Operator):
+
+    'Show this Geometry Nodes tree'
+    bl_idname = 'matalogue.goto_geo'
+    bl_label = 'Go To Geo Nodes'
+
+    tree: bpy.props.StringProperty(default="")
+    is_tool: bpy.props.BoolProperty(default=False)
+
+    def execute(self, context):
+        try:  # Go up one group as many times as possible - error will occur when the top level is reached
+            while True:
+                bpy.ops.node.tree_path_parent()
+        except RuntimeError:
+            pass
+
+        g = bpy.data.node_groups[self.tree]
+        context.space_data.tree_type = 'GeometryNodeTree'
+        if self.is_tool:
+            context.space_data.geometry_nodes_type = 'TOOL'
+            context.space_data.path.append(g)
+        else:
+            context.space_data.geometry_nodes_type = 'MODIFIER'
+            objs_with_modifier = 0
+            active_set = False
+            for obj in context.view_layer.objects:
+                obj_groups = [mod.node_group for mod in obj.modifiers if mod.type == 'NODES']
+                if g in obj_groups:
+                    objs_with_modifier += 1
+                    obj.select_set(True)
+                    if not active_set:  # set first object as active
+                        active_set = True
+                        context.view_layer.objects.active = obj
+                        for mod in obj.modifiers:
+                            if g == mod.node_group and not mod.is_active:
+                                mod.is_active = True
+                                break
+                else:
+                    obj.select_set(False)
+        return {'FINISHED'}
+
+
 class MATALOGUE_OT_go_to_light(bpy.types.Operator):
 
     'Show the nodes for this material'
@@ -415,6 +457,33 @@ class MATALOGUE_PT_groups(bpy.types.Panel):
             op.tree = g.name
 
 
+class MATALOGUE_PT_geonodes(bpy.types.Panel):
+
+    bl_label = "Geo Nodes"
+    bl_space_type = "NODE_EDITOR"
+    bl_region_type = "UI"
+    bl_category = "Trees"
+
+    def draw(self, context):
+        layout = self.layout
+
+        col = layout.column(align=True)
+
+        geo_nodes = []
+        for g in bpy.data.node_groups:
+            if g.type == 'GEOMETRY':
+                geo_nodes.append(g)
+
+        for g in geo_nodes:
+            emboss = False
+            if len(context.space_data.path) > 0:
+                emboss = context.space_data.path[-1].node_tree.name == g.name
+            op = col.operator('matalogue.goto_geo', text=g.name, emboss=emboss, icon=('TOOL_SETTINGS' if g.is_tool
+                                                                                      else 'GEOMETRY_NODES'))
+            op.tree = g.name
+            op.is_tool = g.is_tool
+
+
 class MATALOGUE_PT_lighting(bpy.types.Panel):
 
     bl_label = "Lighting"
@@ -477,10 +546,12 @@ classes = [
     MatalogueSettings,
     MATALOGUE_OT_go_to_material,
     MATALOGUE_OT_go_to_group,
+    MATALOGUE_OT_go_to_geonodes,
     MATALOGUE_OT_go_to_light,
     MATALOGUE_OT_go_to_comp,
     MATALOGUE_PT_materials,
     MATALOGUE_PT_groups,
+    MATALOGUE_PT_geonodes,
     MATALOGUE_PT_lighting,
     MATALOGUE_PT_compositing,
 ]
