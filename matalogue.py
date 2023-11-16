@@ -475,6 +475,7 @@ def draw_geonodes_panel(self, context, conditions, inverse=False):
         )
         op.tree = g.name
         op.is_tool = g.is_tool
+        row.enabled = context.object is not None  # Avoid hard crashing Blender when there's no active object
 
         # Node trees in this tree:
         if active:
