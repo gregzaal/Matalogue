@@ -64,6 +64,16 @@ class MatalogueSettings(bpy.types.PropertyGroup):
         default=False,
         description='Also show materials that have no users. ("All Scenes" must be enabled)',
     )
+    geo_selected_only: bpy.props.BoolProperty(
+        name="Selected Objects Only",
+        default=False,
+        description="Only show geometry node trees used by objects that are selected",
+    )
+    geo_visible_only: bpy.props.BoolProperty(
+        name="Visible Only",
+        default=False,
+        description="Only show geometry node trees used by objects that are visible in the current scene",
+    )
 
 
 #####################################################################
@@ -459,7 +469,7 @@ class MATALOGUE_PT_groups(bpy.types.Panel):
             op.tree = g.name
 
 
-def draw_geonodes_panel(self, context, conditions, inverse=False):
+def draw_geonodes_panel(self, context, conditions, inverse=False, selected_only=False, visible_only=False):
     def draw_item(context, col, g, indent):
         active = False
         row = col.row()
@@ -485,6 +495,21 @@ def draw_geonodes_panel(self, context, conditions, inverse=False):
                     draw_item(context, col, node.node_tree, indent + 1)
                     already_drawn.append(node.node_tree.name)
 
+    def used_by_selected(g):
+        for obj in context.selected_objects:
+            for mod in obj.modifiers:
+                if mod.type == "NODES" and mod.node_group == g:
+                    return True
+        return False
+
+    def used_by_visible(g):
+        for obj in context.view_layer.objects:
+            if obj.visible_get():
+                for mod in obj.modifiers:
+                    if mod.type == "NODES" and mod.node_group == g:
+                        return True
+        return False
+
     layout = self.layout
 
     col = layout.column(align=True)
@@ -492,10 +517,27 @@ def draw_geonodes_panel(self, context, conditions, inverse=False):
     geo_nodes = []
     for g in bpy.data.node_groups:
         if g.type == "GEOMETRY" and any((getattr(g, c) is True for c in conditions)) != inverse:
+            if selected_only and not used_by_selected(g):
+                continue
+            if visible_only and not used_by_visible(g):
+                continue
             geo_nodes.append(g)
 
+    num_drawn = 0
     for g in geo_nodes:
         draw_item(context, col, g, 0)
+        num_drawn += 1
+
+    if num_drawn == 0:
+        row = col.row()
+        row.alignment = "CENTER"
+        row.enabled = False
+        if selected_only:
+            row.label(text="No selected geo nodes")
+        elif visible_only:
+            row.label(text="No visible geo nodes")
+        else:
+            row.label(text="None")
 
 
 def poll_geonodes_panel(conditions, inverse=False):
@@ -525,16 +567,28 @@ class MATALOGUE_PT_geonodes_modifiers(bpy.types.Panel):
     bl_space_type = "NODE_EDITOR"
     bl_region_type = "UI"
     bl_category = "Trees"
+    bl_options = {"HEADER_LAYOUT_EXPAND"}
 
     conditions = ["is_modifier"]
     inverse = False
+
+    def draw_header(self, context):
+        settings = context.window_manager.matalogue_settings
+        row = self.layout.row(align=True)
+        row.alignment = "RIGHT"
+        row.prop(settings, "geo_selected_only", text="", icon="RESTRICT_SELECT_OFF")
+        row.prop(settings, "geo_visible_only", text="", icon="RESTRICT_VIEW_OFF")
+        row.separator()
 
     @classmethod
     def poll(self, context):
         return poll_geonodes_panel(self.conditions, self.inverse)
 
     def draw(self, context):
-        draw_geonodes_panel(self, context, self.conditions, self.inverse)
+        settings = context.window_manager.matalogue_settings
+        draw_geonodes_panel(
+            self, context, self.conditions, self.inverse, settings.geo_selected_only, settings.geo_visible_only
+        )
 
 
 class MATALOGUE_PT_geonodes_tools(bpy.types.Panel):
