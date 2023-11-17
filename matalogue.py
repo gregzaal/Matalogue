@@ -689,13 +689,15 @@ class MATALOGUE_PT_compositing_scenes(bpy.types.Panel):
     bl_category = "Trees"
 
     def draw(self, context):
-        scenes = (sc for sc in bpy.data.scenes if sc.use_nodes)
         layout = self.layout
 
         col = layout.column(align=True)
 
-        for sc in scenes:
+        for sc in bpy.data.scenes:
             name = sc.name
+            if not sc.use_nodes:
+                col.prop(sc, "use_nodes", text=name, emboss=False, icon="ADD")
+                continue
             active = False
             if len(context.space_data.path) > 0:
                 active = (
