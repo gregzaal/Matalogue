@@ -357,6 +357,12 @@ class MATALOGUE_OT_go_to_comp(bpy.types.Operator):
         scene = bpy.data.scenes[self.scene]
         context.window.scene = scene
 
+        try:  # Go up one group as many times as possible - error will occur when the top level is reached
+            while True:
+                bpy.ops.node.tree_path_parent()
+        except RuntimeError:
+            pass
+
         return {"FINISHED"}
 
 
