@@ -382,7 +382,7 @@ class MATALOGUE_PT_materials(bpy.types.Panel):
             name = mat.name
             try:
                 icon_val = layout.icon(mat)
-            except:
+            except RuntimeError:
                 icon_val = 1
                 print("WARNING [Mat Panel]: Could not get icon value for %s" % name)
             if mat.users:
