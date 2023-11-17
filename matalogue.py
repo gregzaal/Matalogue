@@ -673,16 +673,76 @@ class MATALOGUE_PT_compositing(bpy.types.Panel):
     bl_region_type = "UI"
     bl_category = "Trees"
 
+    def draw_header(self, context):
+        layout = self.layout
+        layout.label(text="", icon="NODE_COMPOSITING")
+
     def draw(self, context):
-        scenes = bpy.data.scenes
+        pass
+
+
+class MATALOGUE_PT_compositing_scenes(bpy.types.Panel):
+    bl_label = "Scenes"
+    bl_parent_id = "MATALOGUE_PT_compositing"
+    bl_space_type = "NODE_EDITOR"
+    bl_region_type = "UI"
+    bl_category = "Trees"
+
+    def draw(self, context):
+        scenes = (sc for sc in bpy.data.scenes if sc.use_nodes)
         layout = self.layout
 
         col = layout.column(align=True)
 
         for sc in scenes:
             name = sc.name
-            op = col.operator("matalogue.goto_comp", text=name, emboss=(sc == context.space_data.id), icon="SCENE_DATA")
+            active = False
+            if len(context.space_data.path) > 0:
+                active = (
+                    context.space_data.path[-1].node_tree.name == context.scene.node_tree.name and sc == context.scene
+                )
+            op = col.operator("matalogue.goto_comp", text=name, emboss=active, icon="SCENE_DATA")
             op.scene = name
+
+            # Node trees in this tree:
+            if active and len(bpy.data.scenes) > 1:
+                already_drawn = []
+                for node in context.scene.node_tree.nodes:
+                    if node.type == "GROUP" and node.node_tree.name not in already_drawn:
+                        g = node.node_tree
+                        row = col.row()
+                        row.label(text="", icon="BLANK1")
+                        op = row.operator("matalogue.goto_group", text=g.name, emboss=False, icon="NODETREE")
+                        op.tree_type = "CompositorNodeTree"
+                        op.tree = g.name
+                        already_drawn.append(g.name)
+
+
+class MATALOGUE_PT_compositing_groups(bpy.types.Panel):
+    bl_label = "Groups"
+    bl_parent_id = "MATALOGUE_PT_compositing"
+    bl_space_type = "NODE_EDITOR"
+    bl_region_type = "UI"
+    bl_category = "Trees"
+
+    @classmethod
+    def poll(self, context):
+        comp_groups = (g for g in bpy.data.node_groups if g.type == "COMPOSITING")
+        return len(list(comp_groups)) > 0
+
+    def draw(self, context):
+        layout = self.layout
+        col = layout.column(align=True)
+
+        comp_groups = (g for g in bpy.data.node_groups if g.type == "COMPOSITING")
+
+        for g in comp_groups:
+            emboss = False
+            if len(context.space_data.path) > 0:
+                emboss = context.space_data.path[-1].node_tree.name == g.name
+            op = col.operator("matalogue.goto_group", text=g.name, emboss=emboss, icon="NODETREE")
+            op.tree_type = "CompositorNodeTree"
+            op.tree = g.name
 
 
 #####################################################################
@@ -705,6 +765,8 @@ classes = [
     MATALOGUE_PT_geonodes_groups,
     MATALOGUE_PT_lighting,
     MATALOGUE_PT_compositing,
+    MATALOGUE_PT_compositing_scenes,
+    MATALOGUE_PT_compositing_groups,
 ]
 
 

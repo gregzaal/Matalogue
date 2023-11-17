@@ -15,6 +15,9 @@ Older versions:
 Still to do:
 
 * Center and zoom view to the nodes (requires new API access). As a hack, maybe recenter nodes instead of view?
+* Split into multi-file add-on
+* Add preferences:
+  - Hide panels for other node tree types (e.g. only show shader trees when in shader editor, not geo nodes & comp)
 
 ----
 
