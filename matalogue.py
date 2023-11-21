@@ -46,6 +46,12 @@ class MatalogueSettings(bpy.types.PropertyGroup):
         description="Only show materials used by objects that are visible in the current scene.",
     )
 
+    light_visible_only: bpy.props.BoolProperty(
+        name="Visible Collections Only",
+        default=False,
+        description="Only show lights that are visible in the current scene.",
+    )
+
     all_scenes: bpy.props.BoolProperty(
         name="All Scenes",
         default=False,
@@ -510,6 +516,59 @@ class MATALOGUE_PT_shader_materials(bpy.types.Panel):
         draw_shadernodes_panel(self, context, settings.mat_selected_only, settings.mat_visible_only)
 
 
+class MATALOGUE_PT_shader_lights(bpy.types.Panel):
+    bl_label = "Lighting"
+    bl_parent_id = "MATALOGUE_PT_shader"
+    bl_space_type = "NODE_EDITOR"
+    bl_region_type = "UI"
+    bl_category = "Trees"
+    bl_options = {"HEADER_LAYOUT_EXPAND"}
+
+    def draw_header(self, context):
+        settings = context.window_manager.matalogue_settings
+        row = self.layout.row(align=True)
+        row.alignment = "RIGHT"
+        row.prop(settings, "light_visible_only", text="", icon="RESTRICT_VIEW_OFF")
+        row.separator()
+
+    def draw(self, context):
+        settings = context.window_manager.matalogue_settings
+        objects = context.visible_objects if settings.light_visible_only else context.view_layer.objects
+        lights = [obj for obj in objects if obj.type == "LIGHT"]
+
+        layout = self.layout
+        col = layout.column(align=True)
+
+        for light in lights:
+            if light.data.use_nodes:
+                active = False
+                if light.data == context.space_data.id:
+                    if context.space_data.path[-1].node_tree.name == light.data.node_tree.name:
+                        active = True
+                op = col.operator(
+                    "matalogue.goto_light",
+                    text=light.name,
+                    emboss=active,
+                    icon="LIGHT_%s" % light.data.type,
+                )
+                op.light = light.name
+                op.world = False
+
+        if context.scene.world:
+            if context.scene.world.use_nodes:
+                active = False
+                if context.scene.world == context.space_data.id:
+                    if context.space_data.path[-1].node_tree.name == context.scene.world.node_tree.name:
+                        active = True
+                op = col.operator(
+                    "matalogue.goto_light",
+                    text="World",
+                    emboss=active,
+                    icon="WORLD",
+                )
+                op.world = True
+
+
 class MATALOGUE_PT_shader_groups(bpy.types.Panel):
     bl_label = "Groups"
     bl_parent_id = "MATALOGUE_PT_shader"
@@ -694,40 +753,6 @@ class MATALOGUE_PT_geonodes_groups(bpy.types.Panel):
         draw_geonodes_panel(self, context, self.conditions, self.inverse)
 
 
-class MATALOGUE_PT_lighting(bpy.types.Panel):
-    bl_label = "Lighting"
-    bl_space_type = "NODE_EDITOR"
-    bl_region_type = "UI"
-    bl_category = "Trees"
-
-    def draw(self, context):
-        layout = self.layout
-        lights = [obj for obj in context.view_layer.objects if obj.type == "LIGHT"]
-
-        col = layout.column(align=True)
-
-        for light in lights:
-            if light.data.use_nodes:
-                op = col.operator(
-                    "matalogue.goto_light",
-                    text=light.name,
-                    emboss=(light.data == context.space_data.id),
-                    icon="LIGHT_%s" % light.data.type,
-                )
-                op.light = light.name
-                op.world = False
-
-        if context.scene.world:
-            if context.scene.world.use_nodes:
-                op = col.operator(
-                    "matalogue.goto_light",
-                    text="World",
-                    emboss=(context.scene.world == context.space_data.id),
-                    icon="WORLD",
-                )
-                op.world = True
-
-
 class MATALOGUE_PT_compositing(bpy.types.Panel):
     bl_label = "Compositing"
     bl_space_type = "NODE_EDITOR"
@@ -822,12 +847,12 @@ classes = [
     MATALOGUE_OT_go_to_comp,
     MATALOGUE_PT_shader,
     MATALOGUE_PT_shader_materials,
+    MATALOGUE_PT_shader_lights,
     MATALOGUE_PT_shader_groups,
     MATALOGUE_PT_geonodes,
     MATALOGUE_PT_geonodes_modifiers,
     MATALOGUE_PT_geonodes_tools,
     MATALOGUE_PT_geonodes_groups,
-    MATALOGUE_PT_lighting,
     MATALOGUE_PT_compositing,
     MATALOGUE_PT_compositing_scenes,
     MATALOGUE_PT_compositing_groups,
