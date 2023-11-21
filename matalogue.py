@@ -33,10 +33,6 @@ import bpy
 
 
 class MatalogueSettings(bpy.types.PropertyGroup):
-    expand_mat_options: bpy.props.BoolProperty(
-        name="Options", default=False, description="Show settings for controlling which materials are listed"
-    )  # TODO Remove
-
     mat_selected_only: bpy.props.BoolProperty(
         name="Selected Objects Only", default=False, description="Only show materials used by objects that are selected"
     )
@@ -51,21 +47,6 @@ class MatalogueSettings(bpy.types.PropertyGroup):
         default=False,
         description="Only show lights that are visible in the current scene.",
     )
-
-    all_scenes: bpy.props.BoolProperty(
-        name="All Scenes",
-        default=False,
-        description=(
-            "Show materials from all the scenes (not just the current one). "
-            '("Selected Objects Only" must be disabled)'
-        ),
-    )  # TODO Remove
-
-    show_zero_users: bpy.props.BoolProperty(
-        name="0-User Materials",
-        default=False,
-        description='Also show materials that have no users. ("All Scenes" must be enabled)',
-    )  # TODO Remove
 
     geo_selected_only: bpy.props.BoolProperty(
         name="Selected Objects Only",
@@ -82,95 +63,6 @@ class MatalogueSettings(bpy.types.PropertyGroup):
 #####################################################################
 # Functions
 #####################################################################
-
-
-def material_in_cur_scene(mat):
-    scene = bpy.context.scene
-    for obj in scene.objects:
-        if obj.name != "Matalogue Dummy Object":
-            for slot in obj.material_slots:
-                if slot.material == mat:
-                    return True
-    return False
-
-
-def material_on_sel_obj(mat):
-    selection = bpy.context.selected_objects
-    for obj in selection:
-        if obj.name != "Matalogue Dummy Object":
-            for slot in obj.material_slots:
-                if slot.material == mat:
-                    return True
-    return False
-
-
-def obj_in_visible_collection(obj, scene):
-    for oc in obj.users_collection:
-        for child in bpy.context.window.view_layer.layer_collection.children:
-            if child.is_visible and child.collection == oc:
-                return True
-    for o in scene.collection.objects:  # Master collection can't be hidden
-        if obj == o:
-            return True
-    return False
-
-
-def material_on_vis_collection(mat):
-    for scene in bpy.data.scenes:
-        objs_on_vis_layer = []
-        for obj in scene.objects:
-            if obj.name != "Matalogue Dummy Object":
-                if obj_in_visible_collection(obj, scene):
-                    objs_on_vis_layer.append(obj)
-        for obj in objs_on_vis_layer:
-            for slot in obj.material_slots:
-                if slot.material == mat:
-                    return True
-    return False
-
-
-checked_groups_names_list = []
-materials_from_group = set()
-
-
-def find_materials_in_groupinstances(empty):
-    if empty.instance_collection.name in checked_groups_names_list:
-        return None
-    for obj in bpy.data.collections[empty.instance_collection.name].objects:
-        if obj.instance_type == "COLLECTION" and obj.instance_collection is not None and obj.type == "EMPTY":
-            return find_materials_in_groupinstances(obj)
-        elif obj.type == "MESH":
-            for slot in obj.material_slots:
-                if slot.material:
-                    materials_from_group.add(slot.material)
-    checked_groups_names_list.append(empty.instance_collection.name)  # or no empty mat in group
-    return None
-
-
-def get_materials():
-    settings = bpy.context.window_manager.matalogue_settings
-    materials = []
-    for mat in bpy.data.materials:
-        conditions = [
-            (settings.all_scenes or material_in_cur_scene(mat)),
-            (not settings.mat_selected_only or material_on_sel_obj(mat)),
-            (not settings.mat_visible_only or material_on_vis_collection(mat)),
-            not mat.library,  # Don't show linked materials since they can't be edited anyway
-            mat.use_nodes,
-        ]
-        if all(conditions):
-            materials.append(mat)
-    additional_mats = set()
-    checked_groups_names_list.clear()
-    if settings.mat_selected_only:
-        for obj in bpy.context.selected_objects:
-            if obj.instance_type == "COLLECTION" and obj.instance_collection is not None and obj.type == "EMPTY":
-                find_materials_in_groupinstances(obj)
-                additional_mats = additional_mats | materials_from_group
-                materials_from_group.clear()
-    all_mats = list(set(materials) | additional_mats)
-    all_mats = sorted(all_mats, key=lambda x: x.name.lower())
-    return all_mats
 
 
 def dummy_object(delete=False):
