@@ -399,10 +399,13 @@ def draw_shadernodes_panel(self, context, selected_only=False, visible_only=Fals
             icon_value=icon_val,
         )
         op.mat = mat.name
-        if not mat.users:
-            row.label(text="", icon="ORPHAN_DATA")
+        if mat.library:
+            row.label(text="", icon="LINKED")
         elif mat.use_fake_user:
             row.label(text="", icon="FAKE_USER_ON")
+        elif not mat.users:
+            row.alert = True
+            row.label(text="", icon="ORPHAN_DATA")
 
         # Node trees in this tree:
         if active:
@@ -574,8 +577,13 @@ class MATALOGUE_PT_shader_groups(bpy.types.Panel):
             op = row.operator("matalogue.goto_group", text=g.name, emboss=emboss, icon="NODETREE")
             op.tree_type = "ShaderNodeTree"
             op.tree = g.name
-            if g.use_fake_user:
+            if g.library:
+                row.label(text="", icon="LINKED")
+            elif g.use_fake_user:
                 row.label(text="", icon="FAKE_USER_ON")
+            elif not g.users:
+                row.alert = True
+                row.label(text="", icon="ORPHAN_DATA")
 
 
 def draw_geonodes_panel(self, context, conditions, inverse=False, selected_only=False, visible_only=False):
@@ -594,8 +602,14 @@ def draw_geonodes_panel(self, context, conditions, inverse=False, selected_only=
         )
         op.tree = g.name
         op.is_tool = g.is_tool
-        if g.use_fake_user and not indent:
-            row.label(text="", icon="FAKE_USER_ON")
+        if not indent:
+            if g.library:
+                row.label(text="", icon="LINKED")
+            elif g.use_fake_user:
+                row.label(text="", icon="FAKE_USER_ON")
+            elif not g.users:
+                row.alert = True
+                row.label(text="", icon="ORPHAN_DATA")
         row.enabled = context.object is not None  # Avoid hard crashing Blender when there's no active object
 
         # Node trees in this tree:
@@ -817,8 +831,13 @@ class MATALOGUE_PT_compositing_groups(bpy.types.Panel):
             op = row.operator("matalogue.goto_group", text=g.name, emboss=emboss, icon="NODETREE")
             op.tree_type = "CompositorNodeTree"
             op.tree = g.name
-            if g.use_fake_user:
+            if g.library:
+                row.label(text="", icon="LINKED")
+            elif g.use_fake_user:
                 row.label(text="", icon="FAKE_USER_ON")
+            elif not g.users:
+                row.alert = True
+                row.label(text="", icon="ORPHAN_DATA")
 
 
 #####################################################################
