@@ -48,14 +48,6 @@ Lists all the materials according to the options below. Click on a name to switc
 
 Lists all geometry nodes modifiers and tools in the scene.
 
-##### Groups
-
-Lists all the node groups, including both shader node groups and compositing node groups (separated by a short gap).
-
-Clicking on one of the groups will open it up and allow you to edit the nodes inside without actually adding the group node anywhere.
-
-If you're currently editing shader nodes and you click on a compositing node group, you will be switched to the compositing node tree first and will need to click on the group again in order to open it. This is a known limitation, and I can't figure out a way around it.
-
 ##### Lighting
 
 Lists all the **lamp data** in the current scene, as well as the **World** nodes. Click on a name to switch to the nodes for that lamp.
