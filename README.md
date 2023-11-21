@@ -6,7 +6,7 @@ This makes it easier to **switch between different materials** while shading, an
 
 ### [Download Latest Version](http://bit.ly/matalogue_download) for Blender 4.0
 
-![demo](https://raw.githubusercontent.com/gregzaal/Matalogue/master/demo.gif)
+https://github.com/gregzaal/Matalogue/assets/5604661/e025af6d-6379-470e-b32b-f3ad175b8858
 
 Older versions:
 * [Blender 2.8 - 3.6](https://raw.githubusercontent.com/gregzaal/Matalogue/4045065/matalogue.py)
