@@ -401,8 +401,6 @@ def draw_shadernodes_panel(self, context, selected_only=False, visible_only=Fals
         op.mat = mat.name
         if not mat.users:
             row.label(text="", icon="ORPHAN_DATA")
-        if mat.library_weak_reference:
-            row.label(text="", icon="ASSET_MANAGER")
         elif mat.use_fake_user:
             row.label(text="", icon="FAKE_USER_ON")
 
