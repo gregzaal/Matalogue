@@ -400,29 +400,11 @@ def draw_shadernodes_panel(self, context, selected_only=False, visible_only=Fals
         )
         op.mat = mat.name
         if not mat.users:
-            op = row.operator(
-                "matalogue.goto_mat",
-                text="",
-                emboss=active,
-                icon="ORPHAN_DATA",
-            )
-            op.mat = mat.name
+            row.label(text="", icon="ORPHAN_DATA")
         if mat.library_weak_reference:
-            op = row.operator(
-                "matalogue.goto_mat",
-                text="",
-                emboss=active,
-                icon="ASSET_MANAGER",
-            )
-            op.mat = mat.name
+            row.label(text="", icon="ASSET_MANAGER")
         elif mat.use_fake_user:
-            op = row.operator(
-                "matalogue.goto_mat",
-                text="",
-                emboss=active,
-                icon="FAKE_USER_ON",
-            )
-            op.mat = mat.name
+            row.label(text="", icon="FAKE_USER_ON")
 
         # Node trees in this tree:
         if active:
