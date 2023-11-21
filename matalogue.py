@@ -418,13 +418,17 @@ def draw_shadernodes_panel(self, context, selected_only=False, visible_only=Fals
             )
             op.mat = mat.name
 
-        # # Node trees in this tree:
-        # if active:
-        #     already_drawn = []
-        #     for node in mat.nodes:
-        #         if node.type == "GROUP" and node.node_tree.name not in already_drawn:
-        #             draw_item(context, col, node.node_tree, indent + 1)
-        #             already_drawn.append(node.node_tree.name)
+        # Node trees in this tree:
+        if active:
+            already_drawn = []
+            for node in mat.node_tree.nodes:
+                if node.type == "GROUP" and node.node_tree.name not in already_drawn:
+                    row = col.row(align=True)
+                    row.label(text="", icon="BLANK1")
+                    op = row.operator("matalogue.goto_group", text=node.node_tree.name, emboss=False, icon="NODETREE")
+                    op.tree_type = "ShaderNodeTree"
+                    op.tree = node.node_tree.name
+                    already_drawn.append(node.node_tree.name)
 
     def used_by_selected(mat):
         for obj in context.selected_objects:
@@ -506,8 +510,9 @@ class MATALOGUE_PT_shader_materials(bpy.types.Panel):
         draw_shadernodes_panel(self, context, settings.mat_selected_only, settings.mat_visible_only)
 
 
-class MATALOGUE_PT_groups(bpy.types.Panel):
+class MATALOGUE_PT_shader_groups(bpy.types.Panel):
     bl_label = "Groups"
+    bl_parent_id = "MATALOGUE_PT_shader"
     bl_space_type = "NODE_EDITOR"
     bl_region_type = "UI"
     bl_category = "Trees"
@@ -518,14 +523,10 @@ class MATALOGUE_PT_groups(bpy.types.Panel):
         col = layout.column(align=True)
 
         shader_groups = []
-        comp_groups = []
         for g in bpy.data.node_groups:
             if g.type == "SHADER":
                 shader_groups.append(g)
-            elif g.type == "COMPOSITING":
-                comp_groups.append(g)
 
-        # col.label(text="Shader Groups")
         for g in shader_groups:
             emboss = False
             if len(context.space_data.path) > 0:
@@ -534,24 +535,11 @@ class MATALOGUE_PT_groups(bpy.types.Panel):
             op.tree_type = "ShaderNodeTree"
             op.tree = g.name
 
-        col.separator()
-        col.separator()
-        col.separator()
-
-        # col.label(text="Compositing Groups")
-        for g in comp_groups:
-            emboss = False
-            if len(context.space_data.path) > 0:
-                emboss = context.space_data.path[-1].node_tree.name == g.name
-            op = col.operator("matalogue.goto_group", text=g.name, emboss=emboss, icon="NODETREE")
-            op.tree_type = "CompositorNodeTree"
-            op.tree = g.name
-
 
 def draw_geonodes_panel(self, context, conditions, inverse=False, selected_only=False, visible_only=False):
     def draw_item(context, col, g, indent):
         active = False
-        row = col.row()
+        row = col.row(align=True)
         for i in range(indent):
             row.label(text="", icon="BLANK1")
         if len(context.space_data.path) > 0:
@@ -834,7 +822,7 @@ classes = [
     MATALOGUE_OT_go_to_comp,
     MATALOGUE_PT_shader,
     MATALOGUE_PT_shader_materials,
-    MATALOGUE_PT_groups,
+    MATALOGUE_PT_shader_groups,
     MATALOGUE_PT_geonodes,
     MATALOGUE_PT_geonodes_modifiers,
     MATALOGUE_PT_geonodes_tools,
