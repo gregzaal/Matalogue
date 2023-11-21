@@ -35,19 +35,15 @@ import bpy
 class MatalogueSettings(bpy.types.PropertyGroup):
     expand_mat_options: bpy.props.BoolProperty(
         name="Options", default=False, description="Show settings for controlling which materials are listed"
-    )
+    )  # TODO Remove
 
-    selected_only: bpy.props.BoolProperty(
+    mat_selected_only: bpy.props.BoolProperty(
         name="Selected Objects Only", default=False, description="Only show materials used by objects that are selected"
     )
-
-    vis_collections_only: bpy.props.BoolProperty(
+    mat_visible_only: bpy.props.BoolProperty(
         name="Visible Collections Only",
         default=False,
-        description=(
-            "Only show materials used by objects that are in a visible Collection. "
-            '("Selected Objects Only" must be disabled)'
-        ),
+        description="Only show materials used by objects that are visible in the current scene.",
     )
 
     all_scenes: bpy.props.BoolProperty(
@@ -57,13 +53,14 @@ class MatalogueSettings(bpy.types.PropertyGroup):
             "Show materials from all the scenes (not just the current one). "
             '("Selected Objects Only" must be disabled)'
         ),
-    )
+    )  # TODO Remove
 
     show_zero_users: bpy.props.BoolProperty(
         name="0-User Materials",
         default=False,
         description='Also show materials that have no users. ("All Scenes" must be enabled)',
-    )
+    )  # TODO Remove
+
     geo_selected_only: bpy.props.BoolProperty(
         name="Selected Objects Only",
         default=False,
@@ -149,10 +146,9 @@ def get_materials():
     materials = []
     for mat in bpy.data.materials:
         conditions = [
-            (settings.show_zero_users or mat.users),
             (settings.all_scenes or material_in_cur_scene(mat)),
-            (not settings.selected_only or material_on_sel_obj(mat)),
-            (not settings.vis_collections_only or material_on_vis_collection(mat)),
+            (not settings.mat_selected_only or material_on_sel_obj(mat)),
+            (not settings.mat_visible_only or material_on_vis_collection(mat)),
             not mat.library,  # Don't show linked materials since they can't be edited anyway
             mat.use_nodes,
         ]
@@ -160,7 +156,7 @@ def get_materials():
             materials.append(mat)
     additional_mats = set()
     checked_groups_names_list.clear()
-    if settings.selected_only:
+    if settings.mat_selected_only:
         for obj in bpy.context.selected_objects:
             if obj.instance_type == "COLLECTION" and obj.instance_collection is not None and obj.type == "EMPTY":
                 find_materials_in_groupinstances(obj)
@@ -218,6 +214,12 @@ class MATALOGUE_OT_go_to_material(bpy.types.Operator):
         context.space_data.tree_type = "ShaderNodeTree"
         context.space_data.shader_type = "OBJECT"
         mat = bpy.data.materials[self.mat]
+
+        try:  # Go up one group as many times as possible - error will occur when the top level is reached
+            while True:
+                bpy.ops.node.tree_path_parent()
+        except RuntimeError:
+            pass
 
         objs_with_mat = 0
         active_set = False
@@ -371,66 +373,137 @@ class MATALOGUE_OT_go_to_comp(bpy.types.Operator):
 #####################################################################
 
 
-class MATALOGUE_PT_materials(bpy.types.Panel):
-    bl_label = "Materials"
+def draw_shadernodes_panel(self, context, selected_only=False, visible_only=False):
+    def draw_item(context, col, mat, indent):
+        row = col.row(align=True)
+        for i in range(indent):
+            row.label(text="", icon="BLANK1")
+
+        try:
+            icon_val = layout.icon(mat)
+        except RuntimeError:
+            icon_val = 1
+            print("WARNING [Mat Panel]: Could not get icon value for %s" % mat.name)
+
+        active = mat == context.space_data.id and context.space_data.path[-1].node_tree.name == mat.node_tree.name
+        op = row.operator(
+            "matalogue.goto_mat",
+            text=mat.name,
+            emboss=active,
+            icon_value=icon_val,
+        )
+        op.mat = mat.name
+        if not mat.users:
+            op = row.operator(
+                "matalogue.goto_mat",
+                text="",
+                emboss=active,
+                icon="ORPHAN_DATA",
+            )
+            op.mat = mat.name
+        if mat.library_weak_reference:
+            op = row.operator(
+                "matalogue.goto_mat",
+                text="",
+                emboss=active,
+                icon="ASSET_MANAGER",
+            )
+            op.mat = mat.name
+        elif mat.use_fake_user:
+            op = row.operator(
+                "matalogue.goto_mat",
+                text="",
+                emboss=active,
+                icon="FAKE_USER_ON",
+            )
+            op.mat = mat.name
+
+        # # Node trees in this tree:
+        # if active:
+        #     already_drawn = []
+        #     for node in mat.nodes:
+        #         if node.type == "GROUP" and node.node_tree.name not in already_drawn:
+        #             draw_item(context, col, node.node_tree, indent + 1)
+        #             already_drawn.append(node.node_tree.name)
+
+    def used_by_selected(mat):
+        for obj in context.selected_objects:
+            for slot in obj.material_slots:
+                if slot.material == mat:
+                    return True
+        return False
+
+    def used_by_visible(mat):
+        for obj in context.view_layer.objects:
+            if obj.visible_get():
+                for slot in obj.material_slots:
+                    if slot.material == mat:
+                        return True
+        return False
+
+    layout = self.layout
+
+    col = layout.column(align=True)
+
+    materials = []
+    for mat in bpy.data.materials:
+        if mat.use_nodes:
+            if selected_only and not used_by_selected(mat):
+                continue
+            if visible_only and not used_by_visible(mat):
+                continue
+            materials.append(mat)
+
+    num_drawn = 0
+    for mat in materials:
+        draw_item(context, col, mat, 0)
+        num_drawn += 1
+
+    if num_drawn == 0:
+        row = col.row()
+        row.alignment = "CENTER"
+        row.enabled = False
+        if selected_only:
+            row.label(text="No selected materials")
+        elif visible_only:
+            row.label(text="No visible materials")
+        else:
+            row.label(text="None")
+
+
+class MATALOGUE_PT_shader(bpy.types.Panel):
+    bl_label = "Shader"
     bl_space_type = "NODE_EDITOR"
     bl_region_type = "UI"
     bl_category = "Trees"
 
+    def draw_header(self, context):
+        layout = self.layout
+        layout.label(text="", icon="NODE_MATERIAL")
+
+    def draw(self, context):
+        pass
+
+
+class MATALOGUE_PT_shader_materials(bpy.types.Panel):
+    bl_label = "Materials"
+    bl_parent_id = "MATALOGUE_PT_shader"
+    bl_space_type = "NODE_EDITOR"
+    bl_region_type = "UI"
+    bl_category = "Trees"
+    bl_options = {"HEADER_LAYOUT_EXPAND"}
+
+    def draw_header(self, context):
+        settings = context.window_manager.matalogue_settings
+        row = self.layout.row(align=True)
+        row.alignment = "RIGHT"
+        row.prop(settings, "mat_selected_only", text="", icon="RESTRICT_SELECT_OFF")
+        row.prop(settings, "mat_visible_only", text="", icon="RESTRICT_VIEW_OFF")
+        row.separator()
+
     def draw(self, context):
         settings = context.window_manager.matalogue_settings
-        layout = self.layout
-        materials = get_materials()
-
-        col = layout.column(align=True)
-
-        for mat in materials:
-            name = mat.name
-            try:
-                icon_val = layout.icon(mat)
-            except RuntimeError:
-                icon_val = 1
-                print("WARNING [Mat Panel]: Could not get icon value for %s" % name)
-            if mat.users:
-                op = col.operator(
-                    "matalogue.goto_mat", text=name, emboss=(mat == context.space_data.id), icon_value=icon_val
-                )
-                op.mat = name
-            else:
-                row = col.row(align=True)
-                op = row.operator(
-                    "matalogue.goto_mat", text=name, emboss=(mat == context.space_data.id), icon_value=icon_val
-                )
-                op.mat = name
-                op = row.operator(
-                    "matalogue.goto_mat", text="", emboss=(mat == context.space_data.id), icon="ORPHAN_DATA"
-                )
-                op.mat = name
-
-        if not materials:
-            col.label(text="Nothing to show!")
-
-        col = layout.column(align=True)
-
-        box = col.box()
-        scol = box.column(align=True)
-        scol.prop(
-            settings,
-            "expand_mat_options",
-            toggle=True,
-            icon="TRIA_DOWN" if settings.expand_mat_options else "TRIA_RIGHT",
-        )
-        if settings.expand_mat_options:
-            scol.prop(settings, "selected_only")
-            r = scol.row()
-            r.enabled = not settings.selected_only
-            r.prop(settings, "vis_collections_only")
-            r = scol.row()
-            r.enabled = not settings.selected_only
-            r.prop(settings, "all_scenes")
-            r = scol.row()
-            r.enabled = settings.all_scenes and not settings.selected_only
-            r.prop(settings, "show_zero_users")
+        draw_shadernodes_panel(self, context, settings.mat_selected_only, settings.mat_visible_only)
 
 
 class MATALOGUE_PT_groups(bpy.types.Panel):
@@ -759,7 +832,8 @@ classes = [
     MATALOGUE_OT_go_to_geonodes,
     MATALOGUE_OT_go_to_light,
     MATALOGUE_OT_go_to_comp,
-    MATALOGUE_PT_materials,
+    MATALOGUE_PT_shader,
+    MATALOGUE_PT_shader_materials,
     MATALOGUE_PT_groups,
     MATALOGUE_PT_geonodes,
     MATALOGUE_PT_geonodes_modifiers,
