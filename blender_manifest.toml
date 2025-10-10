@@ -4,6 +4,23 @@ id = "matalogue"
 version = "1.5.0"
 name = "Matalogue"
 tagline = "All your node trees in one list"
+
+type = "add-on"
+
+# Optional link to documentation, support, source files, etc
+website = "https://github.com/gregzaal/Matalogue"
+
+# List defined by Blender and server, see:
+# https://docs.blender.org/manual/en/4.1/extensions/tags.html
+tags = ["Node"]
+
+blender_version_min = "4.2.0"
+# blender_version_max = "5.1.0"
+
+maintainer = "Greg Zaal <gregzaal@gmail.com>"
+license = ["SPDX:GPL-3.0-or-later"]
+copyright = ["2015-2025 Greg Zaal"]
+
 description = """
 A Blender add-on that displays a list of materials and other node trees right in the toolbar of the Node Editor.
 
@@ -56,19 +73,3 @@ When switching to a material that is not actually used by any objects, a dummy o
 
 The dummy object is automatically deleted once it is no longer needed (though only when you switch to another material).
 """
-
-type = "add-on"
-
-# Optional link to documentation, support, source files, etc
-website = "https://github.com/gregzaal/Matalogue"
-
-# List defined by Blender and server, see:
-# https://docs.blender.org/manual/en/4.1/extensions/tags.html
-tags = ["Node"]
-
-blender_version_min = "4.2.0"
-# blender_version_max = "5.1.0"
-
-maintainer = "Greg Zaal <gregzaal@gmail.com>"
-license = ["SPDX:GPL-2.0-or-later"]
-copyright = ["2015-2024 Greg Zaal"]
