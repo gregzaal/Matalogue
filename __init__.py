@@ -52,6 +52,21 @@ class MATALOGUE_Settings(bpy.types.PropertyGroup):
 #####################################################################
 
 
+def set_geometry_nodes_type(context, node_type):
+    """Set geometry nodes type using the newer node_tree_sub_type if available,
+    otherwise fall back to geometry_nodes_type."""
+    if hasattr(context.space_data, "node_tree_sub_type"):
+        context.space_data.node_tree_sub_type = node_type
+    else:
+        context.space_data.geometry_nodes_type = node_type
+
+
+def get_compositor_node_group(scene):
+    if hasattr(scene, "compositing_node_group"):
+        return scene.compositing_node_group
+    return scene.node_tree
+
+
 def dummy_object(delete=False):
     """Return the existing dummy object, or create one if it doesn't exist."""
     scene = bpy.context.scene
@@ -183,10 +198,10 @@ class MATALOGUE_OT_go_to_geonodes(bpy.types.Operator):
         g = bpy.data.node_groups[self.tree]
         context.space_data.tree_type = "GeometryNodeTree"
         if self.is_tool:
-            context.space_data.geometry_nodes_type = "TOOL"
+            set_geometry_nodes_type(context, "TOOL")
             context.space_data.path.append(g)
         else:
-            context.space_data.geometry_nodes_type = "MODIFIER"
+            set_geometry_nodes_type(context, "MODIFIER")
             objs_with_modifier = 0
             active_set = False
             for obj in context.view_layer.objects:
@@ -670,7 +685,8 @@ class MATALOGUE_PT_compositing_scenes(bpy.types.Panel):
             active = False
             if len(context.space_data.path) > 0:
                 active = (
-                    context.space_data.path[-1].node_tree.name == context.scene.node_tree.name and sc == context.scene
+                    context.space_data.path[-1].node_tree.name == get_compositor_node_group(context.scene).name
+                    and sc == context.scene
                 )
             op = col.operator("matalogue.goto_comp", text=name, emboss=active, icon="SCENE_DATA")
             op.scene = name
@@ -678,7 +694,7 @@ class MATALOGUE_PT_compositing_scenes(bpy.types.Panel):
             # Node trees in this tree:
             if active and len(bpy.data.scenes) > 1:
                 already_drawn = []
-                for node in context.scene.node_tree.nodes:
+                for node in get_compositor_node_group(context.scene).nodes:
                     if node.type == "GROUP" and node.node_tree.name not in already_drawn:
                         g = node.node_tree
                         row = col.row()
