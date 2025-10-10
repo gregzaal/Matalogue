@@ -102,6 +102,7 @@ def dummy_object(delete=False):
 
 class MATALOGUE_OT_go_to_material(bpy.types.Operator):
     "Show the nodes for this material"
+
     bl_idname = "matalogue.goto_mat"
     bl_label = "Go To Material"
 
@@ -148,6 +149,7 @@ class MATALOGUE_OT_go_to_material(bpy.types.Operator):
 
 class MATALOGUE_OT_go_to_group(bpy.types.Operator):
     "Show the nodes inside this group"
+
     bl_idname = "matalogue.goto_group"
     bl_label = "Go To Group"
     first_run = True
@@ -176,6 +178,7 @@ class MATALOGUE_OT_go_to_group(bpy.types.Operator):
 
 class MATALOGUE_OT_go_to_geonodes(bpy.types.Operator):
     "Show this Geometry Nodes tree"
+
     bl_idname = "matalogue.goto_geo"
     bl_label = "Go To Geo Nodes"
     first_run = True
@@ -227,6 +230,7 @@ class MATALOGUE_OT_go_to_geonodes(bpy.types.Operator):
 
 class MATALOGUE_OT_go_to_light(bpy.types.Operator):
     "Show the nodes for this material"
+
     bl_idname = "matalogue.goto_light"
     bl_label = "Go To Material"
 
@@ -248,6 +252,7 @@ class MATALOGUE_OT_go_to_light(bpy.types.Operator):
 
 class MATALOGUE_OT_go_to_comp(bpy.types.Operator):
     "Show the nodes for this material"
+
     bl_idname = "matalogue.goto_comp"
     bl_label = "Go To Composite"
     scene: bpy.props.StringProperty(default="")
