@@ -3,7 +3,7 @@ schema_version = "1.0.0"
 id = "matalogue"
 version = "1.5.0"
 name = "Matalogue"
-tagline = "All your node trees in one list!"
+tagline = "All your node trees in one list"
 description = """
 A Blender add-on that displays a list of materials and other node trees right in the toolbar of the Node Editor.
 
@@ -58,7 +58,6 @@ The dummy object is automatically deleted once it is no longer needed (though on
 """
 
 type = "add-on"
-permissions = []
 
 # Optional link to documentation, support, source files, etc
 website = "https://github.com/gregzaal/Matalogue"
