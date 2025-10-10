@@ -16,19 +16,6 @@
 #
 # END GPL LICENSE BLOCK #####
 
-bl_info = {
-    "name": "Matalogue",
-    "description": " Catalogue of node trees in the sidebar to switch between quickly",
-    "author": "Greg Zaal",
-    "version": (1, 4),
-    "blender": (4, 0, 0),
-    "location": "Node Editor > Sidebar (N) > Trees",
-    "warning": "",
-    "wiki_url": "https://github.com/gregzaal/Matalogue",
-    "tracker_url": "https://github.com/gregzaal/Matalogue/issues",
-    "category": "Node",
-}
-
 import bpy
 
 
