@@ -19,7 +19,7 @@
 import bpy
 
 
-class MatalogueSettings(bpy.types.PropertyGroup):
+class MATALOGUE_Settings(bpy.types.PropertyGroup):
     mat_selected_only: bpy.props.BoolProperty(
         name="Selected Objects Only", default=False, description="Only show materials used by objects that are selected"
     )
@@ -371,7 +371,7 @@ class MATALOGUE_PT_shader_materials(bpy.types.Panel):
     bl_options = {"HEADER_LAYOUT_EXPAND"}
 
     def draw_header(self, context):
-        settings = context.window_manager.matalogue_settings
+        settings = context.window_manager.MATALOGUE_Settings
         row = self.layout.row(align=True)
         row.alignment = "RIGHT"
         row.prop(settings, "mat_selected_only", text="", icon="RESTRICT_SELECT_OFF")
@@ -379,7 +379,7 @@ class MATALOGUE_PT_shader_materials(bpy.types.Panel):
         row.separator()
 
     def draw(self, context):
-        settings = context.window_manager.matalogue_settings
+        settings = context.window_manager.MATALOGUE_Settings
         draw_shadernodes_panel(self, context, settings.mat_selected_only, settings.mat_visible_only)
 
 
@@ -392,14 +392,14 @@ class MATALOGUE_PT_shader_lights(bpy.types.Panel):
     bl_options = {"HEADER_LAYOUT_EXPAND"}
 
     def draw_header(self, context):
-        settings = context.window_manager.matalogue_settings
+        settings = context.window_manager.MATALOGUE_Settings
         row = self.layout.row(align=True)
         row.alignment = "RIGHT"
         row.prop(settings, "light_visible_only", text="", icon="RESTRICT_VIEW_OFF")
         row.separator()
 
     def draw(self, context):
-        settings = context.window_manager.matalogue_settings
+        settings = context.window_manager.MATALOGUE_Settings
         objects = context.visible_objects if settings.light_visible_only else context.view_layer.objects
         lights = [obj for obj in objects if obj.type == "LIGHT"]
 
@@ -582,7 +582,7 @@ class MATALOGUE_PT_geonodes_modifiers(bpy.types.Panel):
     inverse = False
 
     def draw_header(self, context):
-        settings = context.window_manager.matalogue_settings
+        settings = context.window_manager.MATALOGUE_Settings
         row = self.layout.row(align=True)
         row.alignment = "RIGHT"
         row.prop(settings, "geo_selected_only", text="", icon="RESTRICT_SELECT_OFF")
@@ -594,7 +594,7 @@ class MATALOGUE_PT_geonodes_modifiers(bpy.types.Panel):
         return poll_geonodes_panel(self.conditions, self.inverse)
 
     def draw(self, context):
-        settings = context.window_manager.matalogue_settings
+        settings = context.window_manager.MATALOGUE_Settings
         draw_geonodes_panel(
             self, context, self.conditions, self.inverse, settings.geo_selected_only, settings.geo_visible_only
         )
@@ -730,7 +730,7 @@ class MATALOGUE_PT_compositing_groups(bpy.types.Panel):
 
 
 classes = [
-    MatalogueSettings,
+    MATALOGUE_Settings,
     MATALOGUE_OT_go_to_material,
     MATALOGUE_OT_go_to_group,
     MATALOGUE_OT_go_to_geonodes,
@@ -756,17 +756,13 @@ def register():
     for cls in classes:
         register_class(cls)
 
-    bpy.types.WindowManager.matalogue_settings = bpy.props.PointerProperty(type=MatalogueSettings)
+    bpy.types.WindowManager.MATALOGUE_Settings = bpy.props.PointerProperty(type=MATALOGUE_Settings)
 
 
 def unregister():
-    del bpy.types.WindowManager.matalogue_settings
+    del bpy.types.WindowManager.MATALOGUE_Settings
 
     from bpy.utils import unregister_class
 
     for cls in reversed(classes):
         unregister_class(cls)
-
-
-if __name__ == "__main__":
-    register()
