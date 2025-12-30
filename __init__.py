@@ -18,6 +18,33 @@
 
 import bpy
 
+def get_prefs(context):
+    addon = context.preferences.addons.get(__name__)
+    return addon.preferences if addon else None
+
+def get_row(parent_layout, context):
+    prefs = get_prefs(context)
+    row = parent_layout.row(align=True)
+    if prefs and prefs.align_ui != 'EXPAND':
+        row.alignment = prefs.align_ui
+    return row
+
+class MATALOGUE_Preferences(bpy.types.AddonPreferences):
+    bl_idname = __name__
+
+    align_ui: bpy.props.EnumProperty(
+        name="Text Alignment",
+        items=[
+            ("EXPAND", "Expand", "Expand to fit width"),
+            ("LEFT", "Left", "Align Left"),
+            ("CENTER", "Center", "Align Center"),
+            ("RIGHT", "Right", "Align Right"),
+        ],
+        default="EXPAND",
+    )
+
+    def draw(self, context):
+        self.layout.prop(self, "align_ui")
 
 class MATALOGUE_Settings(bpy.types.PropertyGroup):
     mat_selected_only: bpy.props.BoolProperty(
@@ -280,7 +307,7 @@ class MATALOGUE_OT_go_to_comp(bpy.types.Operator):
 
 def draw_shadernodes_panel(self, context, selected_only=False, visible_only=False):
     def draw_item(context, col, mat, indent):
-        row = col.row(align=True)
+        row = get_row(col, context)
         for i in range(indent):
             row.label(text="", icon="BLANK1")
 
@@ -311,7 +338,7 @@ def draw_shadernodes_panel(self, context, selected_only=False, visible_only=Fals
             already_drawn = []
             for node in mat.node_tree.nodes:
                 if node.type == "GROUP" and node.node_tree.name not in already_drawn:
-                    row = col.row(align=True)
+                    row = get_row(col, context)
                     row.label(text="", icon="BLANK1")
                     op = row.operator("matalogue.goto_group", text=node.node_tree.name, emboss=False, icon="NODETREE")
                     op.tree_type = "ShaderNodeTree"
@@ -352,8 +379,7 @@ def draw_shadernodes_panel(self, context, selected_only=False, visible_only=Fals
         num_drawn += 1
 
     if num_drawn == 0:
-        row = col.row()
-        row.alignment = "CENTER"
+        row = get_row(col, context)
         row.enabled = False
         if selected_only:
             row.label(text="No selected materials")
@@ -423,11 +449,12 @@ class MATALOGUE_PT_shader_lights(bpy.types.Panel):
 
         for light in lights:
             if light.data.use_nodes:
+                row = get_row(col, context)
                 active = False
                 if light.data == context.space_data.id:
                     if context.space_data.path[-1].node_tree.name == light.data.node_tree.name:
                         active = True
-                op = col.operator(
+                op = row.operator(
                     "matalogue.goto_light",
                     text=light.name,
                     emboss=active,
@@ -437,12 +464,13 @@ class MATALOGUE_PT_shader_lights(bpy.types.Panel):
                 op.world = False
 
         if context.scene.world:
+            row = get_row(col, context)
             if context.scene.world.use_nodes:
                 active = False
                 if context.scene.world == context.space_data.id:
                     if context.space_data.path[-1].node_tree.name == context.scene.world.node_tree.name:
                         active = True
-                op = col.operator(
+                op = row.operator(
                     "matalogue.goto_light",
                     text="World",
                     emboss=active,
@@ -470,7 +498,7 @@ class MATALOGUE_PT_shader_groups(bpy.types.Panel):
 
         for g in shader_groups:
             emboss = False
-            row = col.row(align=True)
+            row = get_row(col, context)
             if len(context.space_data.path) > 0:
                 emboss = context.space_data.path[-1].node_tree.name == g.name
             op = row.operator("matalogue.goto_group", text=g.name, emboss=emboss, icon="NODETREE")
@@ -488,7 +516,7 @@ class MATALOGUE_PT_shader_groups(bpy.types.Panel):
 def draw_geonodes_panel(self, context, conditions, inverse=False, selected_only=False, visible_only=False):
     def draw_item(context, col, g, indent):
         active = False
-        row = col.row(align=True)
+        row = get_row(col, context)
         for i in range(indent):
             row.label(text="", icon="BLANK1")
         if len(context.space_data.path) > 0:
@@ -553,8 +581,7 @@ def draw_geonodes_panel(self, context, conditions, inverse=False, selected_only=
         num_drawn += 1
 
     if num_drawn == 0:
-        row = col.row()
-        row.alignment = "CENTER"
+        row = get_row(col, context)
         row.enabled = False
         if selected_only:
             row.label(text="No selected geo nodes")
@@ -679,8 +706,9 @@ class MATALOGUE_PT_compositing_scenes(bpy.types.Panel):
 
         for sc in bpy.data.scenes:
             name = sc.name
+            row = get_row(col, context)
             if not sc.use_nodes:
-                col.prop(sc, "use_nodes", text=name, emboss=False, icon="ADD")
+                row.prop(sc, "use_nodes", text=name, emboss=False, icon="ADD")
                 continue
             active = False
             if len(context.space_data.path) > 0:
@@ -688,7 +716,7 @@ class MATALOGUE_PT_compositing_scenes(bpy.types.Panel):
                     context.space_data.path[-1].node_tree.name == get_compositor_node_group(context.scene).name
                     and sc == context.scene
                 )
-            op = col.operator("matalogue.goto_comp", text=name, emboss=active, icon="SCENE_DATA")
+            op = row.operator("matalogue.goto_comp", text=name, emboss=active, icon="SCENE_DATA")
             op.scene = name
 
             # Node trees in this tree:
@@ -746,6 +774,7 @@ class MATALOGUE_PT_compositing_groups(bpy.types.Panel):
 
 
 classes = [
+    MATALOGUE_Preferences,
     MATALOGUE_Settings,
     MATALOGUE_OT_go_to_material,
     MATALOGUE_OT_go_to_group,
