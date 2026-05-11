@@ -711,9 +711,10 @@ class MATALOGUE_PT_compositing_scenes(bpy.types.Panel):
                 row.prop(sc, "use_nodes", text=name, emboss=False, icon="ADD")
                 continue
             active = False
-            if len(context.space_data.path) > 0:
+            comp_group = get_compositor_node_group(context.scene)
+            if comp_group is not None and len(context.space_data.path) > 0:
                 active = (
-                    context.space_data.path[-1].node_tree.name == get_compositor_node_group(context.scene).name
+                    context.space_data.path[-1].node_tree.name == comp_group.name
                     and sc == context.scene
                 )
             op = row.operator("matalogue.goto_comp", text=name, emboss=active, icon="SCENE_DATA")
@@ -722,7 +723,7 @@ class MATALOGUE_PT_compositing_scenes(bpy.types.Panel):
             # Node trees in this tree:
             if active and len(bpy.data.scenes) > 1:
                 already_drawn = []
-                for node in get_compositor_node_group(context.scene).nodes:
+                for node in comp_group.nodes:
                     if node.type == "GROUP" and node.node_tree.name not in already_drawn:
                         g = node.node_tree
                         row = col.row()
